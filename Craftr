@@ -1,0 +1,239 @@
+# craftr_module(maxon.c4d)
+#
+# Copyright (C) 2015 Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+from craftr.utils.path import *
+from craftr.utils.lists import autoexpand
+import os, re
+
+load_module('platform')
+
+# path
+# release
+# arch
+setdefault('debug', False)
+setdefault('enable_exceptions', False)
+# runtime_library
+
+mode = 'debug' if debug else 'release'
+
+# =====================================================================
+#   Evaluate pre-conditions and detect Cinema 4D path and release
+# =====================================================================
+
+if defined('path'):
+  path = normpath(path)
+else:
+  path = normpath(__file__ + '/../../..')
+
+if not defined('release'):
+  # Try to deduce the release number from the installation path.
+  match = re.search('Cinema\s+4D\s+R(\d+)', path, re.I)
+  if match:
+    release = int(match.group(1))
+  elif os.path.isfile(join(path, 'CINEMA 4D 64 Bit.exe')):
+    # If that didn't work, pre-R16 versions had the Windows executable
+    # named like this, and it was also distributed with the Mac version.
+    release = 15
+  else:
+    # We'll assume that we're working with the R16+ API.
+    release = 16
+  del match
+
+if not defined('arch'):
+  if platform.name == 'Windows':
+    C = load_module('compiler.msvc')
+  elif platform.name == 'Darwin':
+    C = load_module('compiler.clang')
+  else:
+    error("unsupported OS '{}'".format(platform.name))
+  C.detect()
+  arch = C.arch
+
+if defined('build_dir'):
+  # If a build directory was specified, we'll specialize it and make
+  # a distinct C4D directory.
+  build_dir = join(build_dir, 'c4d_r{}/{}-{}-{}'.format(
+    release, platform.name, arch, mode))
+else:
+  build_dir = join(project_dir, 'build', '{}-{}-{}'.format(
+    platform.name, arch, mode))
+
+info('SDK Version: R{}, Target: {}'.format(release, arch))
+
+resource_dir = join(path, 'resource')
+if release <= 15:
+  source_dir = join(resource_dir, '_api')
+else:
+  source_dir = normpath(path + '/frameworks/cinema.framework/source')
+
+# =====================================================================
+#   Generate source and object file lists and include directories
+# =====================================================================
+
+obj = platform.obj
+lib = platform.lib
+bin = platform.bin
+dll = platform.dll
+
+sources = glob(source_dir + '/**/*.cpp')
+objects = move(sources, source_dir, join(build_dir, 'obj'), platform.obj)
+library = join(build_dir, lib('c4dsdk'))
+
+includes = [
+  source_dir,
+  source_dir + '/c4d_customgui',
+  source_dir + '/c4d_gv',
+  source_dir + '/c4d_libs',
+  source_dir + '/c4d_misc',
+  source_dir + '/c4d_misc/datastructures',
+  source_dir + '/c4d_misc/memory',
+  source_dir + '/c4d_misc/utilities',
+  source_dir + '/c4d_preview',
+  source_dir + '/c4d_scaling',
+  resource_dir + '/res/description']
+if release <= 15:
+  includes.extend(
+    glob(resource_dir + '/modules/*/res/description') +
+    glob(path + '/modules/*/res/description') +
+    glob(path + '/modules/*/*/res/description'))
+else:
+  includes.extend(glob(resource_dir + '/modules/*/res/description'))
+includes = list(map(normpath, includes))
+
+# =====================================================================
+#   Embedded Python support
+# =====================================================================
+
+if release >= 17:
+  python_ver = '2.7'
+elif release >= 12:
+  python_ver = '2.6'
+
+if defined('python_ver'):
+  if release >= 16:
+    python_res = join(resource_dir, 'modules', 'python')
+  else:
+    python_res = join(resource_dir, 'modules', 'python', 'res')
+
+  if platform.name == 'Windows':
+    python_arch = '64' if arch == 'x86' else 'x86'
+    python_fw = join(python_res, 'Python.win' + arch + '.framework')
+    python_lib = 'python' + python_ver.replace('.', '')
+    python_lib_path = join(python_fw, 'libs')
+    python_lib_full = join(python_lib_path, python_lib + '.lib')
+    python_include = join(python_fw, 'include')
+  elif platform.name == 'Darwin':
+    python_fw = join(python_res, 'Python.osx.framework')
+    python_lib = 'Python.osx'
+    python_lib_path = python_fw
+    python_lib_full = join(python_lib_path, python_lib)
+    python_include = join(python_fw, 'include', 'python' + python_ver)
+  else:
+    assert False
+
+# =====================================================================
+#   Compiler settings
+# =====================================================================
+
+if platform.name == 'Windows':
+  if arch not in ('x86', 'x64'):
+    error("unexpected compiler architecture '{}'".format(arch))
+
+  if release >= 16:
+    setdefault('runtime_library', 'dynamic')
+  else:
+    setdefault('runtime_library', 'static')
+  if runtime_library not in ('dynamic', 'static'):
+    error("invalid value for 'runtime_library': {!r}".fromat(runtime_library))
+
+  if arch == 'x86':
+    cdl = lambda x: suffix(x, 'cdl')
+  else:
+    cdl = lambda x: suffix(x, 'cdl64')
+
+  include = lambda l: [['/I', x] for x in l]
+  define = lambda l: [['/D', x] for x in l]
+  obj_out = lambda x: '/Fo' + x
+  bin_out = lambda x: '/Fe' + x
+
+  defines = []
+  defines.extend('__PC WINDOWS _CRT_SECURE_NO_WARNINGS PSAPI_VERSION=1'.split())
+  if arch == 'x86':
+    defines.extend('WIN32 _WIN32'.split())
+  else:
+    defines.extend('WIN64 _WIN64 __C4D_64BIT'.split())
+    if release >= 16:
+      defines.append('MAXON_TARGET_64BIT')
+  if debug:
+    defines.extend('DEBUG _DEBUG'.split())
+    if release >= 16:
+      defines.append('MAXON_TARGET_DEBUG')
+  else:
+    defines.append('NDEBUG')
+  if release >= 16:
+    defines.extend('MAXON_TARGET_WINDOWS MAXON_API'.split(' '))
+
+  compile = ['cl', '/nologo']
+  compile.extend('/c /W4 /WX- /MP /Gm- /Gs /Gy- /fp:precise /Zc:wchar_t- '
+    '/Gd /TP /wd4062 /wd4100 /wd4127 /wd4131 /wd4201 /wd4210 /wd4242 /wd4244 '
+    '/wd4245 /wd4305 /wd4310 /wd4324 /wd4355 /wd4365 /wd4389 /wd4505 /wd4512 '
+    '/wd4611 /wd4706 /wd4718 /wd4740 /wd4748 /wd4996 /FC /errorReport:prompt '
+    '/vmg /vms /w44263 /we4264'.split())
+  if enable_exceptions:
+    compile.append('/EHsc')
+  if debug:
+    compile.extend('/Od /Zi /RTC1'.split())
+  else:
+    compile.extend('/Ox /Oy- /Oi /Ob2 /Ot /GF'.split())
+  if runtime_library == 'dynamic':
+    compile.append('/MDd' if debug else '/MD')
+  else:
+    compile.append('/MTd' if debug else '/MD')
+  compile.extend(include(includes))
+  compile.extend(define(defines))
+  compile.extend('%%in /Fo%%out'.split())
+
+  lib = ['lib', '/nologo', '/OUT:%%out', '%%in']
+  link = ['link', '/nologo', '/DLL', '/OUT:%%out', library, '%%in']
+  if debug:
+    link.insert(2, '/debug')
+elif platform.name == 'Darwin':
+  error("Mac OS supported not implemented.")
+else:
+  assert False
+
+# =====================================================================
+#   SDK Targets
+# =====================================================================
+
+target('Objects',
+  inputs = sources,
+  outputs = objects,
+  command = compile,
+  foreach = True,
+)
+
+target('Library',
+  inputs = Objects.outputs  ,
+  outputs = library,
+  command = lib,
+)

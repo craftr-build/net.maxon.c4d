@@ -68,14 +68,14 @@ if not defined('arch'):
   C.detect()
   arch = C.arch
 
+build_dir_base = '{}-{}-{}'.format(platform.name, arch, mode)
+
 if defined('build_dir'):
   # If a build directory was specified, we'll specialize it and make
   # a distinct C4D directory.
-  build_dir = join(build_dir, 'c4d_r{}/{}-{}-{}'.format(
-    release, platform.name, arch, mode))
+  build_dir = join(build_dir, 'c4d_r{}'.format(release), build_dir_base)
 else:
-  build_dir = join(project_dir, 'build', '{}-{}-{}'.format(
-    platform.name, arch, mode))
+  build_dir = join(project_dir, 'build', build_dir_base)
 
 info('SDK Version: R{}, Target: {}'.format(release, arch))
 
@@ -212,7 +212,7 @@ if platform.name == 'Windows':
   compile.extend(define(defines))
   compile.extend('%%in /Fo%%out'.split())
 
-  lib = ['lib', '/nologo', '/OUT:%%out', '%%in']
+  ar = ['lib', '/nologo', '/OUT:%%out', '%%in']
   link = ['link', '/nologo', '/DLL', '/OUT:%%out', library, '%%in']
   if debug:
     link.insert(2, '/debug')
@@ -235,5 +235,5 @@ target('Objects',
 target('Library',
   inputs = Objects.outputs  ,
   outputs = library,
-  command = lib,
+  command = ar,
 )

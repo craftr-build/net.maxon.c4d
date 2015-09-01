@@ -111,12 +111,11 @@ includes = [
   source_dir + '/c4d_scaling',
   resource_dir + '/res/description']
 if release <= 15:
-  includes.extend(
-    glob(resource_dir + '/modules/*/res/description') +
-    glob(path + '/modules/*/res/description') +
-    glob(path + '/modules/*/*/res/description'))
+  includes += glob(resource_dir + '/modules/*/res/description')
+  includes += glob(path + '/modules/*/res/description')
+  includes += glob(path + '/modules/*/*/res/description')
 else:
-  includes.extend(glob(resource_dir + '/modules/*/res/description'))
+  includes += glob(resource_dir + '/modules/*/description')
 includes = list(map(normpath, includes))
 
 # =====================================================================

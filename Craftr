@@ -170,54 +170,107 @@ if platform.name == 'Windows':
   else:
     cdl = lambda x: suffix(x, 'cdl64')
 
-  include = lambda l: [['/I', x] for x in l]
-  define = lambda l: [['/D', x] for x in l]
+  cinc = lambda l: [['/I', x] for x in l]
+  cdef = lambda l: [['/D', x] for x in l]
   obj_out = lambda x: '/Fo' + x
   bin_out = lambda x: '/Fe' + x
 
-  defines = []
-  defines.extend('__PC WINDOWS _CRT_SECURE_NO_WARNINGS PSAPI_VERSION=1'.split())
+  defines = ['__PC', 'WINDOWS', '_CRT_SECURE_NO_WARNINGS', 'PSAPI_VERSION=1']
   if arch == 'x86':
-    defines.extend('WIN32 _WIN32'.split())
+    defines += ['WIN32', '_WIN32']
   else:
-    defines.extend('WIN64 _WIN64 __C4D_64BIT'.split())
+    defines += ['WIN64', '_WIN64', '__C4D_64BIT']
     if release >= 16:
-      defines.append('MAXON_TARGET_64BIT')
+      defines += ['MAXON_TARGET_64BIT']
   if debug:
-    defines.extend('DEBUG _DEBUG'.split())
+    defines += ['DEBUG', '_DEBUG']
     if release >= 16:
-      defines.append('MAXON_TARGET_DEBUG')
+      defines += ['MAXON_TARGET_DEBUG']
   else:
-    defines.append('NDEBUG')
+    defines += ['NDEBUG']
   if release >= 16:
-    defines.extend('MAXON_TARGET_WINDOWS MAXON_API'.split(' '))
+    defines += ['MAXON_TARGET_WINDOWS', 'MAXON_API']
 
-  compile = ['cl', '/nologo']
-  compile.extend('/c /W4 /WX- /MP /Gm- /Gs /Gy- /fp:precise /Zc:wchar_t- '
+  compile = ('cl /nologo /c /W4 /WX- /MP /Gm- /Gs /Gy- /fp:precise /Zc:wchar_t- '
     '/Gd /TP /wd4062 /wd4100 /wd4127 /wd4131 /wd4201 /wd4210 /wd4242 /wd4244 '
     '/wd4245 /wd4305 /wd4310 /wd4324 /wd4355 /wd4365 /wd4389 /wd4505 /wd4512 '
     '/wd4611 /wd4706 /wd4718 /wd4740 /wd4748 /wd4996 /FC /errorReport:prompt '
     '/vmg /vms /w44263 /we4264'.split())
   if enable_exceptions:
-    compile.append('/EHsc')
+    compile += ['/EHsc']
   if debug:
-    compile.extend('/Od /Zi /RTC1'.split())
+    compile += ['/Od', '/Zi', '/RTC1']
   else:
-    compile.extend('/Ox /Oy- /Oi /Ob2 /Ot /GF'.split())
+    compile += ['/Ox', '/Oy-', '/Oi', '/Ob2', '/Ot', '/GF']
   if runtime_library == 'dynamic':
-    compile.append('/MDd' if debug else '/MD')
+    compile += ['/MDd' if debug else '/MD']
   else:
-    compile.append('/MTd' if debug else '/MD')
-  compile.extend(include(includes))
-  compile.extend(define(defines))
-  compile.extend('%%in /Fo%%out'.split())
+    compile += ['/MTd' if debug else '/MD']
+  compile += cinc(includes)
+  compile += cdef(defines)
+  compile += ['%%in', '/Fo%%out']
 
   ar = ['lib', '/nologo', '/OUT:%%out', '%%in']
   link = ['link', '/nologo', '/DLL', '/OUT:%%out', library, '%%in']
   if debug:
     link.insert(2, '/debug')
 elif platform.name == 'Darwin':
-  error("Mac OS supported not implemented.")
+  if arch != 'x86_64':
+    error("unexpected compiler architecture '{}'".format(arch))
+  cdl = lambda x: suffix(x, 'dylib')
+
+  cinc = lambda l: [['-I', x] for x in l]
+  cdef = lambda l: [['-D', x] for x in l]
+  obj_out = lambda x: ['-o', x]
+  bin_out = lambda x: ['-o', x]
+
+  defines = ['MAC', 'C4D_COCOA', '__clang__', '__LP64__']
+  if release >= 16:
+    defines += ['MAXON_API', 'MAXON_TARGET_OSX']
+    if debug:
+      defines += ['MAXON_TARGET_DEBUG']
+  else:
+    if debug:
+      defines += ['DEBUG', '_DEBUG']
+
+  if release <= 15:
+    std_lib = 'libc++'
+  else:
+    std_lib = 'libstdc++'
+
+  compile = ('clang++ -c -arch x86_64 -fmessage-length=0 -Wno-trigraphs '
+    '-fno-rtti -fpascal-strings -Wno-missing-field-initializers '
+    '-Wno-missing-prototypes -Wreturn-type -Wno-non-virtual-dtor '
+    '-Wno-exit-time-destructors -Wformat -Wmissing-braces -Wparentheses '
+    '-Wno-switch -Wunused-function -Wunused-label -Wno-unused-parameter '
+    '-Wunused-variable -Wunused-value -Wno-empty-body -Wuninitialized '
+    '-Wunknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion '
+    '-Wconstant-conversion -Wint-conversion -Wno-shorten-64-to-32 '
+    '-Wenum-conversion -Wno-newline-eof -Wno-c++11-extensions -fasm-blocks '
+    '-fstrict-aliasing -Wdeprecated-declarations -Wno-invalid-offsetof '
+    '-msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-sign-conversion '
+    '-Wno-logical-op-parentheses '
+    '-funsafe-math-optimizations -ftrapping-math -c -std=c++11'.split())
+  if not enable_exceptions:
+    compile += ['-fno-exceptions']
+  compile += ['-stdlib=' + std_lib]
+  if debug:
+    compile += ['-g', '-O0']
+    if release <= 15:
+      compile += ['-include', join(source_dir, 'ge_mac_debug_flags.h')]
+  else:
+    compile += ['-O3']
+    if release <= 15:
+      compile += ['-include', join(source_dir, 'ge_mac_flags.h')]
+  compile += cinc(includes)
+  compile += cdef(defines)
+  compile += ['%%in', '-o', '%%out']
+
+  ar = ['ar', 'rcs', '%%out', '%%in']
+  link = ['clang++', '-shared', '-stdlib=' + std_lib, library,
+    '%%in', '-o', '%%out']
+  if debug:
+    link.insert(2, '-g')
 else:
   assert False
 

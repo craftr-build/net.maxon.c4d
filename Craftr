@@ -224,33 +224,53 @@ elif platform.name == 'Darwin':
   obj_out = lambda x: ['-o', x]
   bin_out = lambda x: ['-o', x]
 
-  defines = ['MAC', 'C4D_COCOA', '__clang__', '__LP64__']
-  if release >= 16:
-    defines += ['MAXON_API', 'MAXON_TARGET_OSX']
+  if release <= 15:
+    # All other defines will be set by ge_mac<_debug>_flags.h
+    defines = ['C4D_COCOA']
+  else:
+    # todo: Is it also the same for R17 or does this apply to R16 only?
+    defines = ['__MAC', '__64BIT', 'MAXON_TARGET_OSX',
+               'MAXON_TARGET_64BIT', 'MAXON_API']
     if debug:
       defines += ['MAXON_TARGET_DEBUG']
-  else:
-    if debug:
-      defines += ['DEBUG', '_DEBUG']
+    else:
+      defines += ['MAXON_TARGET_RELEASE']
+
+  setdefault('std_lib', 'libstdc++' if release <= 15 else 'libc++')
 
   if release <= 15:
-    std_lib = 'libc++'
+    compile = ('clang++ -c -arch x86_64 '
+      '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
+      '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
+      '-fno-rtti -fpascal-strings '
+      '-Wno-missing-field-initializers -Wno-missing-prototypes '
+      '-Wno-non-virtual-dtor -Woverloaded-virtual -Wno-exit-time-destructors '
+      '-Wmissing-braces -Wparentheses -Wno-switch -Wunused-function '
+      '-Wunused-label -Wno-unused-parameter -Wunused-variable -Wunused-value '
+      '-Wno-empty-body -Wno-uninitialized -Wunknown-pragmas -Wno-shadow '
+      '-Wno-four-char-constants -Wno-conversion -Wno-constant-conversion '
+      '-Wno-int-conversion -Wno-bool-conversion -Wno-enum-conversion '
+      '-Wno-shorten-64-to-32 -Wno-newline-eof -Wno-c++11-extensions '
+      '-fasm-blocks -fstrict-aliasing -Wdeprecated-declarations '
+      '-Wno-invalid-offsetof -mmacosx-version-min=10.6 -msse3 '
+      '-fvisibility=hidden -fvisibility-inlines-hidden -Wno-sign-conversion '
+      '-Wno-logical-op-parentheses -fno-math-errno'.split())
   else:
-    std_lib = 'libstdc++'
-
-  compile = ('clang++ -c -arch x86_64 -fmessage-length=0 -Wno-trigraphs '
-    '-fno-rtti -fpascal-strings -Wno-missing-field-initializers '
-    '-Wno-missing-prototypes -Wreturn-type -Wno-non-virtual-dtor '
-    '-Wno-exit-time-destructors -Wformat -Wmissing-braces -Wparentheses '
-    '-Wno-switch -Wunused-function -Wunused-label -Wno-unused-parameter '
-    '-Wunused-variable -Wunused-value -Wno-empty-body -Wuninitialized '
-    '-Wunknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion '
-    '-Wconstant-conversion -Wint-conversion -Wno-shorten-64-to-32 '
-    '-Wenum-conversion -Wno-newline-eof -Wno-c++11-extensions -fasm-blocks '
-    '-fstrict-aliasing -Wdeprecated-declarations -Wno-invalid-offsetof '
-    '-msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-sign-conversion '
-    '-Wno-logical-op-parentheses '
-    '-funsafe-math-optimizations -ftrapping-math -c -std=c++11'.split())
+    compile = ('clang++ -c -arch x86_64 -fmessage-length=0 '
+      '-fdiagnostics-show-note-include-stack '
+      '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
+      '-fno-rtti -fpascal-strings -Wmissing-field-initializers '
+      '-Wmissing-prototypes -Wdocumentation -Wno-non-virtual-dtor '
+      '-Woverloaded-virtual -Wno-exit-time-destructors -Wmissing-braces '
+      '-Wparentheses -Wno-switch -Wunused-function -Wunused-label '
+      '-Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body '
+      '-Wuninitialized -Wunknown-pragmas -Wshadow -Wno-four-char-constants '
+      '-Wno-conversion -Wconstant-conversion -Wint-conversion '
+      '-Wbool-conversion -Wenum-conversion -Wsign-compare -Wshorten-64-to-32 '
+      '-Wno-newline-eof -Wno-c++11-extensions -fasm-blocks -fstrict-aliasing '
+      '-Wdeprecated-declarations -Winvalid-offsetof -mmacosx-version-min=10.7 '
+      '-msse3 -fvisibility=hidden -fvisibility-inlines-hidden '
+      '-Wno-sign-conversion -fno-math-errno'.split())
   if not enable_exceptions:
     compile += ['-fno-exceptions']
   compile += ['-stdlib=' + std_lib]

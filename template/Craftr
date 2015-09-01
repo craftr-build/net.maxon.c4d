@@ -8,7 +8,9 @@ from craftr.utils.path import *
 P = load_module('platform')
 
 session.path.append(project_dir + '/..')
-c4d = load_module('maxon.c4d')
+c4d = session.get_namespace('maxon.c4d')
+c4d.legacy_api = False
+load_module(c4d)
 
 build_dir = join(project_dir, 'build', c4d.build_dir_base)
 source_dir = join(project_dir, 'source')
@@ -30,7 +32,7 @@ target('Objects',
   inputs = sources,
   outputs = objects,
   foreach = True,
-  command = c4d.compile + c4d.include(includes),
+  command = c4d.compile + c4d.cinc(includes),
 )
 
 target('Plugin',

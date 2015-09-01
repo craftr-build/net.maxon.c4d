@@ -31,6 +31,7 @@ load_module('platform')
 # arch
 setdefault('debug', False)
 setdefault('enable_exceptions', False)
+setdefault('legacy_api', False)
 # runtime_library
 
 mode = 'debug' if debug else 'release'
@@ -189,6 +190,8 @@ if platform.name == 'Windows':
     defines += ['NDEBUG']
   if release >= 16:
     defines += ['MAXON_TARGET_WINDOWS', 'MAXON_API']
+  if legacy_api:
+    defines += ['__LEGACY_API']
 
   compile = ('cl /nologo /c /W4 /WX- /MP /Gm- /Gs /Gy- /fp:precise /Zc:wchar_t- '
     '/Gd /TP /wd4062 /wd4100 /wd4127 /wd4131 /wd4201 /wd4210 /wd4242 /wd4244 '
@@ -234,6 +237,8 @@ elif platform.name == 'Darwin':
       defines += ['MAXON_TARGET_DEBUG']
     else:
       defines += ['MAXON_TARGET_RELEASE']
+  if legacy_api:
+    defines += ['__LEGACY_API']
 
   setdefault('std_lib', 'libstdc++' if release <= 15 else 'libc++')
 

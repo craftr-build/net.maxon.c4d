@@ -77,7 +77,7 @@ if defined('build_dir'):
 else:
   build_dir = join(project_dir, 'build', build_dir_base)
 
-info('SDK Version: R{}, Target: {}'.format(release, arch))
+info('SDK Version: R{}, Target: {} {}'.format(release, arch, mode))
 
 resource_dir = join(path, 'resource')
 if release <= 15:

@@ -135,8 +135,8 @@ if defined('python_ver'):
     python_res = join(resource_dir, 'modules', 'python', 'res')
 
   if platform.name == 'Windows':
-    python_arch = '64' if arch == 'x86' else 'x86'
-    python_fw = join(python_res, 'Python.win' + arch + '.framework')
+    python_arch = '86' if arch == 'x86' else '64'
+    python_fw = join(python_res, 'Python.win' + python_arch + '.framework')
     python_lib = 'python' + python_ver.replace('.', '')
     python_lib_path = join(python_fw, 'libs')
     python_lib_full = join(python_lib_path, python_lib + '.lib')

@@ -69,7 +69,7 @@ if not defined('arch'):
   C.detect()
   arch = C.arch
 
-build_dir_base = '{}-{}-{}'.format(platform.name, arch, mode)
+build_dir_base = '{}-R{}-{}-{}'.format(platform.name, release, arch, mode)
 
 if defined('build_dir'):
   # If a build directory was specified, we'll specialize it and make

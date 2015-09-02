@@ -1,0 +1,256 @@
+# craftr_module(maxon.c4d.pycompile)
+#
+# Copyright (C) 2015 Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+'''# PyCompile Utilities
+
+Utility functionality to assist in generating distributes python eggs
+for plugin release.
+
+> Note: This file is a Craftr module but must be compatible with most
+> Python versions as some of its functions run this file as a script
+> in a sub-process.
+
+## Usage
+
+The following examples assume that you have external Python modules
+in a `devel` directory. For distribution, they shall be compiled and
+archived to the `res/modules2.6` and `res/modules2.7` directories.
+
+    my_plugin\
+      devel\
+        res.py
+        my_plugin_tools\
+          __init__.py
+          some_tools.py
+        some_package\
+          setup.py
+          src\
+            some_package\
+              __init__.py
+          etc...
+
+This script does exactly that.
+
+```python
+from craftr.utils.path import *
+session.path.append(join(project_dir, '..'))
+pycompile = load_module('maxon.c4d.pycompile')
+
+
+class PythonDistro(pycompile.C4DDistro):
+  # The base directory that contains the sources.
+  source_dir = join(project_dir, 'devel')
+
+  # The directory in which the compiled modules should be saved to.
+  res_dir = join(project_dir, 'res')
+
+  # The versions to compile for. Defaults to exactly this value.
+  versions = ['2.6', '2.7']
+
+  # A list of directory names that are to be compiled using setuptools.
+  setuptools_packages = ['some_package']
+
+  # A list of packages that should be compiled and archived manually
+  # without a setup.py script. The first item in the sub-list is the
+  # output filename of the egg.
+  manual_packages = [
+    ['my_tools-{py}.egg', 'res.py', 'my_plugin_tools'],
+  ]
+```
+
+This can now be invoked using `craftr -fPythonDistr`. It requires that
+the programs `python2.6` and `python2.7` are present in your `PATH`!
+'''
+
+from __future__ import print_function
+
+import os
+import pipes
+import py_compile
+import re
+import subprocess
+import sys
+import zipfile
+
+
+def shell_quote(s):
+  if os.name == 'nt' and os.sep == '\\':
+    s = s.replace('"', '\\"')
+    if re.search('\s', s):
+      s = '"' + s + '"'
+    return s
+  else:
+    return pipes.quote(s)
+
+
+def shell_run(command, **kwargs):
+  if isinstance(command, (list, tuple)):
+    command = ' '.join(shell_quote(x) for x in command)
+  print(command)
+  return subprocess.call(command, shell=True, **kwargs)
+
+
+def get_pyfile_pair(filename):
+  ''' Given the filename of a Python source or byte compiled filename,
+  returns a pair of the source and byte compiled filename. '''
+
+  if filename.endswith('.py'):
+    filename = filename[:-3]
+  elif filename.endswith('.pyc'):
+    filename = filename[:-4]
+  else:
+    raise ValueError('filename does not end with .py or .pyc')
+
+  return (filename + '.py', filename + '.pyc')
+
+
+def bytecompile(pybin, source, outdir=None):
+  ''' Compiles the specified *source* file or package directory to the
+  output file (or package directry) to the specified output directory
+  *outdir*. Regardless of PEP 3147, this will always place the byte
+  compiled files in the old-style place. '''
+
+  if pybin is not None:
+    if outdir is None:
+      outdir = os.path.dirname(source)
+    command = [pybin, __file__, 'bytecompile', source, outdir]
+    return shell_run(command)
+
+  def recurse(filename, basedir):
+    if os.path.isfile(filename) and filename.endswith('.py'):
+      cfile = filename[:-3] + '.pyc'
+      cfile = os.path.join(outdir, os.path.relpath(cfile, basedir))
+      print("  [c]", os.path.relpath(filename))
+      py_compile.compile(filename, cfile)
+    elif os.path.isdir(filename):
+      for item in os.listdir(filename):
+        recurse(os.path.join(filename, item), basedir)
+
+  print("Bytecompiling", os.path.relpath(source))
+  recurse(source, os.path.dirname(source))
+
+
+def bdist_egg(pybin, package, outdir, exclude_source=True, quiet=True):
+  ''' Assuming *package* is the path to a directory that contains a
+  `setup.py` script, this script will generate a Python binary egg
+  distribution of the package to the specified *outdir*. '''
+
+  if not os.path.isdir(outdir):
+    os.makedirs(outdir)
+  command = [pybin, 'setup.py']
+  if quiet:
+    command.append('-q')
+  command += ['bdist_egg', '--dist-dir', outdir]
+  if exclude_source:
+    command.append('--exclude-source-files')
+  print("\nCreating Binary distribution of", os.path.relpath(package),
+    "at", os.path.relpath(outdir))
+  return shell_run(command, cwd=package)
+
+
+def create_egg(pybin, source, dest, exclude_source=True):
+  ''' Creates a Python Egg (without EGG-INFO) from the specified *source*
+  python module using the specified *pybin*. The egg will be saved to *dest*.
+  Unlike `bdist_egg()`, this function really creates the zipfile at *dest*.
+
+  If *source* is a list, its items are assumed to be filenames instead
+  that are all supposed to be packed into the output egg. '''
+
+  if not source:
+    raise ValueError('no sources specified')
+  if isinstance(source, str):
+    source = [source]
+
+  if pybin is not None:
+    command = [pybin, __file__, 'create_egg'] + source + [dest, str(bool(exclude_source))]
+    return shell_run(command)
+
+  print("\nCreating python egg at", os.path.relpath(dest))
+  egg = zipfile.PyZipFile(dest, 'w')
+  for filename in source:
+    print("  [+]", filename)
+    egg.writepy(filename)
+  return 0
+
+
+def purge(directories, suffix='.pyc'):
+  ''' Purge the specified *directories* and all its subfolders from
+  byte-compile python cache folders. *directories* may also be a string
+  of a single directory. '''
+
+  if isinstance(directories, str):
+    directories = [directories]
+
+  def recurse(dirname):
+    for item in os.listdir(dirname):
+      item = os.path.join(dirname, item)
+      if item.endswith(suffix) and os.path.isfile(item):
+        os.remove(item)
+      elif os.path.isdir(item):
+        recurse(item)
+
+  for dirname in directories:
+    if os.path.isdir(dirname):
+      recurse(dirname)
+
+
+class C4DDistro(object):
+  ''' This class can be inherited to generate python archives from
+  the information specified on class-level. The action happens when
+  the class is being constructed. '''
+
+  # source_dir
+  # res_dir
+  versions = ['2.6', '2.7']
+  setuptools_packages = []
+  manual_packages = []
+
+  def __init__(self):
+    for version in self.versions:
+      pybin = 'python' + version
+      outdir = os.path.join(self.res_dir, 'modules' + version)
+      for package in self.setuptools_packages:
+        if not os.path.isabs(package):
+          package = os.path.join(self.source_dir, package)
+        bdist_egg(pybin, package, outdir)
+      for package in self.manual_packages:
+        name, files = package[0], package[1:]
+        name = name.format(py='py' + version)
+        outfile = os.path.join(outdir, name)
+        files = [f if os.path.isabs(f) else os.path.join(self.source_dir, f)
+                 for f in files]
+        create_egg(pybin, files, outfile)
+
+
+def main():
+  if sys.argv[1] == 'bytecompile':
+    bytecompile(None, sys.argv[2], sys.argv[3])
+  elif sys.argv[1] == 'create_egg':
+    sources = sys.argv[2:-2]
+    dest = sys.argv[-2]
+    exclude_source = True if sys.argv[-1] == 'True' else False
+    create_egg(None, sources, dest, exclude_source)
+  else:
+    print("error: Unexpected command", sys.argv[1], file=sys.stderr)
+
+
+if __name__ == "__main__":
+  main()

@@ -186,6 +186,14 @@ def create_egg(pybin, source, dest, exclude_source=True):
   print("\nCreating python egg at", os.path.relpath(dest))
   egg = zipfile.PyZipFile(dest, 'w')
   for filename in source:
+    # Make sure that the file/s is/are being recompiled.
+    if filename.endswith('.py'):
+      bin_file = get_pyfile_pair(filename)[1]
+      if os.path.isfile(bin_file):
+        os.remove(bin_file)
+    elif os.path.isdir(filename):
+      purge(filename)
+
     print("  [+]", filename)
     egg.writepy(filename)
   return 0

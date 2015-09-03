@@ -1,0 +1,16 @@
+exec ("""class res(object):
+ # Automatically generated using craftr-c4d
+ project_path = os.path.dirname(__file__)
+ def string(self, name, *subst):
+  result = __res__.LoadString(getattr(self, name))
+  for item in subst: result = result.replace('#', item, 1)
+  return result
+ def tup(self, name, *subst):
+  return (getattr(self, name), self.string(name, *subst))
+ def file(self, *parts):
+  return os.path.join(self.project_path, *parts)
+ def bitmap(self, *parts):
+  b = c4d.bitmaps.BaseBitmap()
+  if b.InitWith(self.file(*parts))[0] != c4d.IMAGERESULT_OK: return None
+  return b
+ {{symbols}}\n""" + "res = res()")

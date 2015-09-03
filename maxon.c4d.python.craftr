@@ -186,8 +186,8 @@ def parse_symbols_string(string):
 
 
 def get_resource_files(plugin_dir):
-  """ Returns a dictionary with various contents about a plugin's
-  resource folder. Returns None if there is not resource folder. """
+  ''' Returns a dictionary with various contents about a plugin's
+  resource folder. Returns None if there is not resource folder. '''
 
   resfolder = os.path.join(plugin_dir, 'res')
   c4d_symbols = os.path.join(resfolder, 'c4d_symbols.h')
@@ -299,8 +299,7 @@ def symbols_preformat(symbols, desc_symbols):
 
 
 def load_template(name):
-  ''' Loads a file by *name* from the pkgres folder ending with
-  ``.template`` and returns its contents. '''
+  ''' Loads the contents of a template from the `templates` directory. '''
 
   dirname = os.path.dirname(__file__)
   filename = os.path.join(dirname, 'templates', name + '.template')

@@ -116,9 +116,21 @@ class PythonDistro(python.C4DDistro):
 
 This can now be invoked using `craftr -fPythonDistr`. It requires that
 the programs `python2.6` and `python2.7` are present in your `PATH`!
-'''
 
-# TODO: Apex & python source protection
+## Protecting your Python plugin from the command-line
+
+__Important__: This requires the [apex][] plugin to be installed to
+the Cinema 4D version you are developing the plugin in.
+
+```python
+def protect():
+  pyp_file = join(project_dir, 'my_plugin.pyp')
+  maxon.c4d.python.protect_pyp(pyp_file)
+```
+
+[apex]: https://github.com/nr-plugins/apex
+[_localimport]: https://gist.github.com/NiklasRosenstein/f5690d8f36bbdc8e5556
+'''
 
 from __future__ import print_function
 
@@ -492,6 +504,21 @@ class C4DDistro(object):
                  for f in files]
         create_egg(pybin, files, outfile)
 
+
+# =====================================================================
+#  Python source protection
+# =====================================================================
+
+if __name__ == '__craftr__':
+  load_module('maxon.c4d')
+
+def protect_pyp(filename):
+  ''' Runs the Cinema 4D source protect over the specified *filename*.
+  Important: Requires the Apex plugin installed. '''
+
+  app = maxon.c4d.app
+  cwd = os.path.dirname(app)
+  shell_run([app, '-apex-protect-source', filename, '-nogui'], cwd=cwd)
 
 # =====================================================================
 #  Main - invoked by some functions in this script in new processes

@@ -299,6 +299,27 @@ else:
   assert False
 
 # =====================================================================
+#   Determine application path
+# =====================================================================
+
+if platform.name == 'Windows':
+  if arch == 'x64':
+    if release < 16:
+      app = join(path, 'CINEMA 4D 64 Bit.exe')
+    else:
+      app = join(path, 'CINEMA 4D.exe')
+  elif arch == 'x86':
+    app = join(path, 'CINEMA 4D.exe')
+  else:
+    assert False
+elif platform.name == 'Darwin':
+  app = join(path, 'CINEMA 4D.app/Contents/MacOS/CINEMA 4D')
+else:
+  assert False
+
+debug_args = ['-debug', '-g_alloc=debug', '-g_console=true']
+
+# =====================================================================
 #   SDK Targets
 # =====================================================================
 

@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from craftr.utils.path import *
-from craftr.utils.lists import autoexpand
 import os, re
 
 load_module('platform')
@@ -96,7 +94,8 @@ bin = platform.bin
 dll = platform.dll
 
 sources = glob(source_dir + '/**/*.cpp')
-objects = move(sources, source_dir, join(build_dir, 'obj'), platform.obj)
+objects = platform.obj(rmvsuffix(sources))
+objects = move(sources, source_dir, join(build_dir, 'obj'))
 library = join(build_dir, lib('c4dsdk'))
 
 includes = [
@@ -166,9 +165,9 @@ if platform.name == 'Windows':
     error("invalid value for 'runtime_library': {!r}".fromat(runtime_library))
 
   if arch == 'x86':
-    cdl = lambda x: suffix(x, 'cdl')
+    cdl = lambda x: addsuffix(x, '.cdl')
   else:
-    cdl = lambda x: suffix(x, 'cdl64')
+    cdl = lambda x: addsuffix(x, '.cdl64')
 
   cinc = lambda l: [['/I', x] for x in l]
   cdef = lambda l: [['/D', x] for x in l]
@@ -219,7 +218,7 @@ if platform.name == 'Windows':
 elif platform.name == 'Darwin':
   if arch != 'x86_64':
     error("unexpected compiler architecture '{}'".format(arch))
-  cdl = lambda x: suffix(x, 'dylib')
+  cdl = lambda x: addsuffix(x, '.dylib')
 
   cinc = lambda l: [['-I', x] for x in l]
   cdef = lambda l: [['-D', x] for x in l]
@@ -328,10 +327,12 @@ target('Objects',
   outputs = objects,
   command = compile,
   foreach = True,
+  description = 'Building Object File (%%out)',
 )
 
 target('Library',
   inputs = Objects.outputs  ,
   outputs = library,
   command = ar,
+  description = 'Building Library File (%%out)',
 )

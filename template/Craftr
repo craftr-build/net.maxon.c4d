@@ -33,11 +33,13 @@ target('Objects',
   outputs = objects,
   foreach = True,
   command = c4d.compile + c4d.cinc(includes),
+  description = 'Building Object File (%%out)',
 )
 
 target('Plugin',
   inputs = objects,
   requires = [c4d.library] + libs,
   outputs = plugin,
-  command = c4d.link + libs,
+  command = c4d.link + libs + implicit_libs,
+  description = 'Building Plugin File (%%out)',
 )

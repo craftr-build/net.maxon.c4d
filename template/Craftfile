@@ -19,6 +19,7 @@ plugin = c4d.cdl(project_dir + '/myplugin')
 sources = glob(join(source_dir, '**', '*.cpp'))
 includes = [project_dir]
 libs = []
+implicit_libs = []
 
 # Have any other modules you want to include? Easy.
 #
@@ -26,7 +27,8 @@ libs = []
 # includes += my.utils.includes
 # libs += [my.utils.library]
 
-objects = move(sources, project_dir, join(build_dir, 'obj'), c4d.obj)
+objects = c4d.obj(rmvsuffix(sources))
+objects = move(sources, project_dir, join(build_dir, 'obj'))
 
 target('Objects',
   inputs = sources,

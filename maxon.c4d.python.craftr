@@ -440,6 +440,10 @@ def create_egg(pybin, source, dest, exclude_source=True):
     command = [pybin, __file__, 'create_egg'] + source + [dest, str(bool(exclude_source))]
     return shell_run(command)
 
+  dirname = os.path.dirname(dest)
+  if not os.path.exists(dirname):
+    os.makedirs(dirname)
+
   print("\nCreating python egg at", os.path.relpath(dest))
   egg = zipfile.PyZipFile(dest, 'w')
   for filename in source:

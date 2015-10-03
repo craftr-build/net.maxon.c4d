@@ -469,16 +469,21 @@ def purge(directories, suffix='.pyc'):
     directories = [directories]
 
   def recurse(dirname):
-    for item in os.listdir(dirname):
-      item = os.path.join(dirname, item)
-      if item.endswith(suffix) and os.path.isfile(item):
-        os.remove(item)
-      elif os.path.isdir(item):
-        recurse(item)
+    if os.path.isfile(dirname):
+      if dirname.endswith('.py') or dirname.endswith('.pyc'):
+        py, pyc = get_pyfile_pair(dirname)
+        if os.path.isfile(pyc):
+          os.remove(pyc)
+    elif os.path.isdir(dirname):
+      for item in os.listdir(dirname):
+        item = os.path.join(dirname, item)
+        if item.endswith(suffix) and os.path.isfile(item):
+          os.remove(item)
+        elif os.path.isdir(item):
+          recurse(item)
 
   for dirname in directories:
-    if os.path.isdir(dirname):
-      recurse(dirname)
+    recurse(dirname)
 
 
 class C4DDistro(object):
@@ -491,6 +496,7 @@ class C4DDistro(object):
   versions = ['2.6', '2.7']
   setuptools_packages = []
   manual_packages = []
+  do_purge = True
 
   def __init__(self):
     for version in self.versions:
@@ -507,6 +513,9 @@ class C4DDistro(object):
         files = [f if os.path.isabs(f) else os.path.join(self.source_dir, f)
                  for f in files]
         create_egg(pybin, files, outfile)
+        if self.do_purge:
+          purge(files)
+
 
 
 # =====================================================================

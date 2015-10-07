@@ -65,7 +65,7 @@ if not defined('arch'):
   C.detect()
   arch = C.arch
 
-info('SDK Version: R{}, Target: {}'.format(release, arch))
+info('SDK Version: R{}, Target: {}, Compiler: {} v{}'.format(release, arch, C.name, C.version))
 
 resource_dir = join(path, 'resource')
 if release <= 15:
@@ -186,7 +186,9 @@ if platform.name == 'Windows':
     '/Gd /TP /wd4062 /wd4100 /wd4127 /wd4131 /wd4201 /wd4210 /wd4242 /wd4244 '
     '/wd4245 /wd4305 /wd4310 /wd4324 /wd4355 /wd4365 /wd4389 /wd4505 /wd4512 '
     '/wd4611 /wd4706 /wd4718 /wd4740 /wd4748 /wd4996 /FC /errorReport:prompt '
-    '/vmg /vms /w44263 /we4264 /FS'.split())
+    '/vmg /vms /w44263 /we4264'.split())
+  if compiler.msvc.version >= 'v18':
+    cxx.append('/FS')  # required if multiple processes write to the PDB file (since v18)
   cxx.switch('exceptions', enabled=['/EHsc'])
   cxx.switch('debug',
     enabled=['/Od', '/Zi', '/RTC1'],

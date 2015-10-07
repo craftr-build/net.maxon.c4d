@@ -6,38 +6,19 @@
 session.path.append(project_dir + '/..')
 
 P = load_module('platform')
-c4d = load_module('maxon.c4d', legacy_api=True)
+c4d = load_module('maxon.c4d', build_dir=join(project_dir, 'build'))
 
-build_dir = join(project_dir, 'build', c4d.build_dir_base)
-source_dir = join(project_dir, 'source')
+setdefault('debug', False)
+build_dir = join(dirname(c4d.build_dir), module.identifier)
 
-plugin = c4d.cdl(project_dir + '/' + module.identifier)
-sources = glob(join(source_dir, '**', '*.cpp'))
-includes = [project_dir, join(project_dir, 'include')]
-libs = []
-implicit_libs = []
-
-# Have any other modules you want to include? Easy.
-#
-# load_module('my.utils')
-# includes += my.utils.includes
-# libs += [my.utils.library]
-
-objects = c4d.obj(rmvsuffix(sources))
-objects = move(objects, source_dir, join(build_dir, 'obj'))
-
-target('Objects',
-  inputs = sources,
-  outputs = objects,
-  foreach = True,
-  command = c4d.compile + c4d.cinc(includes),
-  description = 'Building Object File (%%out)',
+c4d.cxx_objects('Objects',
+  sources = glob(join(project_dir, 'source/**/*.cpp')),
+  includes = [project_dir, join(project_dir, 'include')],
 )
 
-target('Plugin',
-  inputs = objects,
-  requires = [c4d.library] + libs,
-  outputs = plugin,
-  command = c4d.link + libs + implicit_libs,
-  description = 'Building Plugin File (%%out)',
+c4d.cxx_plugin('Plugin',
+  name = module.identifier,
+  inputs = [Objects],
+  libs = [],
+  external_libs = [],
 )

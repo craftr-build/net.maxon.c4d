@@ -177,6 +177,7 @@ if platform.name == 'Windows':
     defines.append(['MAXON_TARGET_WINDOWS', 'MAXON_API'])
     defines.switch('debug',
       enabled=['MAXON_TARGET_DEBUG'])
+  defines.switch('legacy_api', enabled='__LEGACY_API')
 
   cxx = CommandBuilder()
   cxx.append('cl /nologo /c /W4 /WX- /MP /Gm- /Gs /Gy- /fp:precise /Zc:wchar_t- '

@@ -166,9 +166,11 @@ if platform.name == 'Windows':
   if arch == 'x86':
     defines.append(['WIN32', '_WIN32'])
   else:
-    defines.append(['WIN64', '_WIN64', '__C4D_64BIT'])
+    defines.append(['WIN64', '_WIN64'])
     if release >= 16:
-      defines.append(['MAXON_TARGET_64BIT'])
+      defines.append('MAXON_TARGET_64BIT')
+    else:
+      defines.append('__C4D_64BIT')
   if release <= 15:
     defines.switch('debug',
       enabled=['DEBUG', '_DEBUG'],

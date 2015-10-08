@@ -86,7 +86,7 @@ def gen_build_dir_base(debug):
   mode = 'debug' if debug else 'release'
   return 'R{}-{}-{}-{}'.format(release, platform.name, arch, mode)
 
-build_dir = join(build_dir, gen_build_dir_base(debug), 'c4dsdk')
+build_dir = join(build_dir, gen_build_dir_base(debug), 'maxon.c4d')
 lib_name = join(build_dir, lib('c4dsdk'))
 sources = glob(source_dir + '/**/*.cpp')
 
@@ -224,6 +224,7 @@ elif platform.name == 'Darwin':
   _default_stdlib = 'libstdc++' if release <= 15 else 'libc++'
 
   defines = CommandBuilder()
+  defines.switch('legacy_api', enabled='__LEGACY_API')
   if release <= 15:
     # All other defines will be set by ge_mac<_debug>_flags.h
     defines.append('C4D_COCOA')
@@ -281,14 +282,13 @@ elif platform.name == 'Darwin':
     stdlib = options.get('stdlib', _default_stdlib)
     if stdlib not in ('libc++', 'libstdc++'):
       raise ValueError('invalid stdlib: {!r}'.format(stdlib))
-    return ['-stdlib=', stdlib]
+    return ['-stdlib=' + stdlib]
 
   ar = CommandBuilder(['ar', 'rcs', '%%out', '%%in'])
 
-  link = CommandBuilder(['clang++', '-shared'])
+  link = CommandBuilder(['clang++', '-shared', lib_name])
   link.append(_cxx_stdlib)
   link.switch('debug', enabled='-g')
-  link.switch('debug', enabled=lib_debug, disabled=lib_release)
   link.append(['%%in', '-o', '%%out'])
 
 else:

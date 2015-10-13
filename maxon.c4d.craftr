@@ -55,17 +55,18 @@ if not defined('release'):
     release = 16
   del match
 
-if not defined('arch'):
-  if platform.name == 'Windows':
-    C = load_module('compiler.msvc')
-  elif platform.name == 'Darwin':
-    C = load_module('compiler.clang')
-  else:
-    error("unsupported OS '{}'".format(platform.name))
-  C.detect()
-  arch = C.arch
+if platform.name == 'Windows':
+  Cxx = load_module('compiler.msvc').CxxCompiler()
+elif platform.name == 'Darwin':
+  Cxx = load_module('compiler.clang').CxxCompiler()
+else:
+  error("unsupported OS '{}'".format(platform.name))
 
-info('SDK Version: R{}, Target: {}, Compiler: {} v{}'.format(release, arch, C.name, C.version))
+if not defined('arch'):
+  Cxx.detect()
+  arch = Cxx.arch
+
+info('SDK Version: R{}, Target: {}, Compiler: {} v{}'.format(release, arch, Cxx.name, Cxx.version))
 
 resource_dir = join(path, 'resource')
 if release <= 15:

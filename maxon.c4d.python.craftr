@@ -507,11 +507,12 @@ class C4DDistro(object):
           package = os.path.join(self.source_dir, package)
         bdist_egg(pybin, package, outdir)
       for package in self.manual_packages:
-        name, files = package[0], package[1:]
+        name, files = package
         name = name.format(py='py' + version)
         outfile = os.path.join(outdir, name)
-        files = [f if os.path.isabs(f) else os.path.join(self.source_dir, f)
-                 for f in files]
+        files = [
+          f if os.path.isabs(f) else os.path.join(self.source_dir, f)
+          for f in files]
         create_egg(pybin, files, outfile)
         if self.do_purge:
           purge(files)

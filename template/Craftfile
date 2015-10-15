@@ -3,21 +3,22 @@
 # Copyright (C) <Year> <Name>
 # All rights reserved.
 
-session.path.append(project_dir + '/..')
+setdefault('build_dir', join(project_dir, 'build'), set_global=True)
+setdefault('debug', False, set_global=True)
 
-P = load_module('platform')
-c4d = load_module('maxon.c4d', build_dir=join(project_dir, 'build'))
+append_search_path('..')
+load_module('platform')
+c4d = load_module('maxon.c4d')
 
-setdefault('debug', False)
-build_dir = join(dirname(c4d.build_dir), module.identifier)
+build_dir = join(build_dir, c4d.gen_build_dir_base(debug), module.identifier)
 
-c4d.cxx_objects('Objects',
+Objects = c4d.cxx_objects(
   sources = glob(join(project_dir, 'source/**/*.cpp')),
   includes = [project_dir, join(project_dir, 'include')],
 )
 
-c4d.cxx_plugin('Plugin',
-  name = module.identifier,
+Plugin = c4d.cxx_plugin(
+  filename = module.identifier,
   inputs = [Objects],
   libs = [],
   external_libs = [],

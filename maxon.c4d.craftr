@@ -88,7 +88,6 @@ def gen_build_dir_base(debug):
   return 'R{}-{}-{}-{}'.format(release, platform.name, arch, mode)
 
 build_dir = join(build_dir, gen_build_dir_base(debug), 'maxon.c4d')
-lib_name = join(build_dir, lib('c4dsdk'))
 sources = glob(source_dir + '/**/*.cpp')
 
 includes = [
@@ -287,7 +286,7 @@ elif platform.name == 'Darwin':
 
   ar = CommandBuilder(['ar', 'rcs', '%%out', '%%in'])
 
-  link = CommandBuilder(['clang++', '-shared', lib_name])
+  link = CommandBuilder(['clang++', '-shared'])
   link.append(_cxx_stdlib)
   link.switch('debug', enabled='-g')
   link.append(['%%in', '-o', '%%out'])
@@ -320,9 +319,8 @@ debug_args = ['-debug', '-g_alloc=debug', '-g_console=true']
 #   Rules
 # =====================================================================
 
-def cxx_objects(target_name, sources, includes=(), defines=(),
-    additional_flags=(), objects=None, objects_dir=None, base_dir=None,
-    module=None, **options):
+def cxx_objects(sources, includes=(), defines=(), additional_flags=(),
+    objects=None, objects_dir=None, base_dir=None, module=None, **options):
   ''' Comple the C++ *sources* into object files.
 
   Options:
@@ -333,6 +331,9 @@ def cxx_objects(target_name, sources, includes=(), defines=(),
       on the Cinema 4D release.
     stdlib (str): The name of the standard library to link with on Mac OS.
   '''
+
+  if not sources:
+    raise ValueError('no sources specified')
 
   valid_options = 'debug legacy_api msvc_runtime_library stdlib'
   craftr.utils.accept_keys(options, valid_options, 'option')
@@ -362,12 +363,13 @@ def cxx_objects(target_name, sources, includes=(), defines=(),
   flags.extend(cdef(defines))
   flags.extend(additional_flags)
 
-  return module.target(target_name, inputs=sources, outputs=objects,
+  return module.target(inputs=sources, outputs=objects,
     command=flags, foreach=True, meta_type='objects', meta_includes=includes,
-    meta_defines=defines, meta_additional_flags=additional_flags)
+    meta_defines=defines, meta_additional_flags=additional_flags,
+    description='Building Object %%out')
 
 
-def cxx_plugin(target_name, name, inputs, libs=(), external_libs=(),
+def cxx_plugin(filename, inputs=None, libs=(), external_libs=(),
     additional_flags=(), module=None, **options):
   ''' Generate a Cinema 4D plugin from the specified *inputs*. The
   *inputs* may be a list of object files or targets. If a target is
@@ -375,8 +377,7 @@ def cxx_plugin(target_name, name, inputs, libs=(), external_libs=(),
   lists object files or a library file to link with.
 
   Arguments:
-    target_name (str): The name of the target that will be declared.
-    name (str): The name of the plugin file. If a relative path is
+    filename (str): The name of the plugin file. If a relative path is
       given, it will be placed in the calling module's project dir.
     inputs (list of {Target, list of str}): List of inputs. An input
       can be a Target or a list of object filenames. A target can be
@@ -396,6 +397,11 @@ def cxx_plugin(target_name, name, inputs, libs=(), external_libs=(),
     debug (bool): Automatically read from the calling module if omitted.
     stdlib (str): The name of the standard library to link with on Mac OS.
   '''
+
+  if not filename:
+    raise ValueError('no filename specified')
+  if not inputs:
+    raise ValueError('no inputs specified')
 
   valid_options = 'debug stdlib'
   craftr.utils.accept_keys(options, valid_options, 'option')
@@ -420,32 +426,34 @@ def cxx_plugin(target_name, name, inputs, libs=(), external_libs=(),
     else:
       objects.extend(autoexpand(_input))
 
-  if not os.path.isabs(name):
-    name = os.path.join(module.get('project_dir'), name)
-  name = self.cdl(name)
+  if not os.path.isabs(filename):
+    filename = os.path.join(module.get('project_dir'), filename)
+  filename = self.cdl(filename)
 
   libs = list(libs)
-  libs.append(lib_name)
+  libs.append(Library.outputs[0])
 
   flags = link(**options)
   flags.extend(libs)
   flags.extend(external_libs)
   flags.extend(additional_flags)
-  return module.target(target_name, inputs=objects, outputs=[name],
-    requires=libs, command=flags, meta_type='c4d_plugin')
+  return module.target(inputs=objects, outputs=[filename],
+    requires=libs, command=flags, meta_type='c4d_plugin',
+    description='Linking C4D Plugin %%out')
 
 
-def cxx_library(target_name, inputs, name=None, full_path=None, includes=(),
-    library_dir=None, additional_flags=(), module=None):
+def cxx_library(inputs, filename, includes=(), library_dir=None,
+    additional_flags=(), module=None):
   ''' Create a static library with the specified *name* in the
   *library_dir* from the *inputs*. All inputs must be object files or
   targets that generate object files.
 
   Arguments:
-    target_name (str): The name of the target.
-    name (str): The name of the library. An absolute path can be
-      specified here. This is used if *full_path* is not specified.
-    full_path (str): The full path of the output library (including suffix).
+    target_name (str): The name of the target. Automatically deduced
+      using Target Name Deduction if omitted.
+    filename (str): The name of the library. An absolute path can be
+      specified here. The filename must not have a suffix, it is added
+      automatically.
     inputs (list of {Target, list of str}): List of object targets or
       object file names to create the library from.
     includes (list of str): A list of include directories that must
@@ -457,6 +465,9 @@ def cxx_library(target_name, inputs, name=None, full_path=None, includes=(),
     module (Module): A module to declare the target for. Defaults to
       the calling module.
   '''
+
+  if not inputs:
+    raise ValueError('no inputs specified')
 
   module = craftr.utils.get_calling_module(module)
   objects = []
@@ -471,33 +482,33 @@ def cxx_library(target_name, inputs, name=None, full_path=None, includes=(),
     else:
       objects.extend(autoexpand(input_))
 
-  if not full_path:
-    if not name:
-      raise ValueError('name or full_path must be specified')
+  if not filename:
+    raise ValueError('filename must not be empty')
 
-    if not os.path.isabs(name):
-      if not library_dir:
-        build_dir = module.get('build_dir', None)
-        if build_dir is None:
-          raise ValueError('build_dir not defined')
-        library_dir = join(build_dir, 'lib')
-      name = os.path.join(library_dir, name)
-    full_path = self.lib(name)
+  if not os.path.isabs(filename):
+    if not library_dir:
+      build_dir = module.get('build_dir', None)
+      if build_dir is None:
+        raise ValueError('build_dir not defined')
+      library_dir = build_dir
+    filename = os.path.join(library_dir, filename)
+  filename = lib(filename)
 
   includes = autoexpand(includes)
-  return module.target(target_name, inputs=objects, outputs=[full_path],
-    command=ar(), meta_type='library', meta_includes=includes)
+  return module.target(inputs=objects, outputs=[filename],
+    command=ar(), meta_type='library', meta_includes=includes,
+    description='Creating Library %%out')
 
 
 # =====================================================================
 #   SDK Targets
 # =====================================================================
 
-cxx_objects('Objects',
+Objects = cxx_objects(
   sources = sources,
 )
 
-cxx_library('Library',
-  full_path = lib_name,
+Library = cxx_library(
+  filename = 'c4dsdk',
   inputs = [Objects],
 )

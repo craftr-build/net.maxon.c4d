@@ -55,9 +55,9 @@ if not defined('release'):
     release = 16
   del match
 
-if platform.name == 'Windows':
+if platform.id == 'win':
   Cxx = load_module('compiler.msvc').CxxCompiler()
-elif platform.name == 'Darwin':
+elif platform.id == 'mac':
   Cxx = load_module('compiler.clang').CxxCompiler()
 else:
   error("unsupported OS '{}'".format(platform.name))
@@ -85,7 +85,7 @@ dll = platform.dll
 
 def gen_build_dir_base(debug):
   mode = 'debug' if debug else 'release'
-  return 'R{}-{}-{}-{}'.format(release, platform.name, arch, mode)
+  return 'r{}-{}-{}-{}'.format(release, platform.id, arch, mode)
 
 build_dir = join(build_dir, gen_build_dir_base(debug), 'maxon.c4d')
 sources = glob(source_dir + '/**/*.cpp')
@@ -125,14 +125,14 @@ if defined('python_ver'):
   else:
     python_res = join(resource_dir, 'modules', 'python', 'res')
 
-  if platform.name == 'Windows':
+  if platform.id == 'win':
     python_arch = '86' if arch == 'x86' else '64'
     python_fw = join(python_res, 'Python.win' + python_arch + '.framework')
     python_lib = 'python' + python_ver.replace('.', '')
     python_lib_path = join(python_fw, 'libs')
     python_lib_full = join(python_lib_path, python_lib + '.lib')
     python_include = join(python_fw, 'include')
-  elif platform.name == 'Darwin':
+  elif platform.id == 'mac':
     python_fw = join(python_res, 'Python.osx.framework')
     python_lib = 'Python.osx'
     python_lib_path = python_fw
@@ -145,7 +145,7 @@ if defined('python_ver'):
 #   Compiler settings
 # =====================================================================
 
-if platform.name == 'Windows':
+if platform.id == 'win':
   if arch not in ('x86', 'x64'):
     error("unexpected compiler architecture '{}'".format(arch))
 
@@ -211,7 +211,7 @@ if platform.name == 'Windows':
   link.switch('debug', enabled='/debug')
   link.append('%%in')
 
-elif platform.name == 'Darwin':
+elif platform.id == 'mac':
   if arch != 'x86_64':
     error("unexpected compiler architecture '{}'".format(arch))
   cdl = lambda x: addsuffix(x, '.dylib')
@@ -298,7 +298,7 @@ else:
 #   Determine application path
 # =====================================================================
 
-if platform.name == 'Windows':
+if platform.id == 'win':
   if arch == 'x64':
     if release < 16:
       app = join(path, 'CINEMA 4D 64 Bit.exe')
@@ -308,7 +308,7 @@ if platform.name == 'Windows':
     app = join(path, 'CINEMA 4D.exe')
   else:
     assert False
-elif platform.name == 'Darwin':
+elif platform.id == 'mac':
   app = join(path, 'CINEMA 4D.app/Contents/MacOS/CINEMA 4D')
 else:
   assert False

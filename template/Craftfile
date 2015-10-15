@@ -10,15 +10,18 @@ append_search_path('..')
 load_module('platform')
 c4d = load_module('maxon.c4d')
 
+include_dir = join(project_dir, 'include')
+source_dir = join(project_dir, 'source')
+plugin_dir = join(project_dir, 'plugin')
 build_dir = join(build_dir, c4d.gen_build_dir_base(debug), module.identifier)
 
 Objects = c4d.cxx_objects(
-  sources = glob(join(project_dir, 'source/**/*.cpp')),
-  includes = [project_dir, join(project_dir, 'include')],
+  sources = glob(join(source_dir, '**/*.cpp')),
+  includes = [include_dir, plugin_dir],
 )
 
 Plugin = c4d.cxx_plugin(
-  filename = module.identifier,
+  filename = join(plugin_dir, module.identifier),
   inputs = [Objects],
   libs = [],
   external_libs = [],

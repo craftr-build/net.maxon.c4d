@@ -56,17 +56,21 @@ if not defined('release'):
   del match
 
 if platform.id == 'win':
-  Cxx = load_module('compiler.msvc').CxxCompiler()
+  _compiler = load_module('compiler.msvc').CxxCompiler()
 elif platform.id == 'mac':
-  Cxx = load_module('compiler.clang').CxxCompiler()
+  _compiler = load_module('compiler.clang').CxxCompiler()
 else:
   error("unsupported OS '{}'".format(platform.name))
 
 if not defined('arch'):
-  Cxx.detect()
-  arch = Cxx.arch
+  _compiler.detect(silent=session.action != 'export')
+  if _compiler.arch:
+    arch = _compiler.arch
+  else:
+    arch = 'x64'
 
-info('SDK Version: R{}, Target: {}, Compiler: {} v{}'.format(release, arch, Cxx.name, Cxx.version))
+info('SDK Version: R{}, Target: {}, Compiler: {} v{}'.format(
+  release, arch, _compiler.name, _compiler.version))
 
 resource_dir = join(path, 'resource')
 if release <= 15:
@@ -187,7 +191,7 @@ if platform.id == 'win':
     '/wd4245 /wd4305 /wd4310 /wd4324 /wd4355 /wd4365 /wd4389 /wd4505 /wd4512 '
     '/wd4611 /wd4706 /wd4718 /wd4740 /wd4748 /wd4996 /FC /errorReport:prompt '
     '/vmg /vms /w44263 /we4264'.split())
-  if compiler.msvc.version >= 'v18':
+  if _compiler.version and _compiler.version >= 'v18':
     cxx.append('/FS')  # required if multiple processes write to the PDB file (since v18)
   cxx.switch('exceptions', enabled=['/EHsc'])
   cxx.switch('debug',

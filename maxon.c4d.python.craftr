@@ -499,6 +499,7 @@ class C4DDistro(object):
   do_purge = True
 
   def __init__(self):
+    self.results = []
     for version in self.versions:
       pybin = 'python' + version
       outdir = os.path.join(self.res_dir, 'modules' + version)
@@ -506,6 +507,7 @@ class C4DDistro(object):
         if not os.path.isabs(package):
           package = os.path.join(self.source_dir, package)
         bdist_egg(pybin, package, outdir)
+        # XXX: Find output filename of egg.
       for package in self.manual_packages:
         name, files = package
         name = name.format(py='py' + version)
@@ -514,9 +516,9 @@ class C4DDistro(object):
           f if os.path.isabs(f) else os.path.join(self.source_dir, f)
           for f in files]
         create_egg(pybin, files, outfile)
+        self.results.append(outfile)
         if self.do_purge:
           purge(files)
-
 
 
 # =====================================================================

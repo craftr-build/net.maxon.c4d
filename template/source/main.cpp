@@ -1,13 +1,13 @@
 // Copyright (C) <year> <name>
 // All rights reserved.
 
-#include <c4d.h>
-#include <res/c4d_symbols.h>
+#include "main.h"
 
 // --------------------------------------------------------------------------
 // --------------------------------------------------------------------------
 Bool PluginStart()
 {
+  GePrint("Hello, World! from the craftr-c4d Template Project!");
   return true;
 }
 

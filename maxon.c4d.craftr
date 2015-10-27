@@ -20,15 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import os, re, craftr
-
 load_module('platform')
+is_windows = (platform.id == 'win')
+is_mac = (platform.id == 'mac')
+if not is_windows and not is_mac:
+  raise EnvironmentError('only Windows and Mac OS are supported')
+
+import os, re, craftr
 
 # path
 # release
 # arch
 setdefault('debug', False)
-setdefault('build_dir', join(project_dir, 'build'))
 
 mode = 'debug' if debug else 'release'
 
@@ -82,16 +85,6 @@ else:
 #   Generate source and object file lists and include directories
 # =====================================================================
 
-obj = platform.obj
-lib = platform.lib
-bin = platform.bin
-dll = platform.dll
-
-def gen_build_dir_base(debug):
-  mode = 'debug' if debug else 'release'
-  return 'r{}-{}-{}-{}'.format(release, platform.id, arch, mode)
-
-build_dir = join(build_dir, gen_build_dir_base(debug), 'maxon.c4d')
 sources = glob(source_dir + '/**/*.cpp')
 
 includes = [
@@ -146,159 +139,6 @@ if defined('python_ver'):
     assert False
 
 # =====================================================================
-#   Compiler settings
-# =====================================================================
-
-if platform.id == 'win':
-  if arch not in ('x86', 'x64'):
-    error("unexpected compiler architecture '{}'".format(arch))
-
-  _default_runtime_lib = 'static' if release <= 15 else 'dynamic'
-
-  if arch == 'x86':
-    cdl = lambda x: addsuffix(x, '.cdl')
-  else:
-    cdl = lambda x: addsuffix(x, '.cdl64')
-
-  cinc = lambda l: [['/I', x] for x in l]
-  cdef = lambda l: [['/D', x] for x in l]
-  obj_out = lambda x: '/Fo' + x
-  bin_out = lambda x: '/Fe' + x
-
-  defines = CommandBuilder()
-  defines.append(['__PC', 'WINDOWS', '_CRT_SECURE_NO_WARNINGS', 'PSAPI_VERSION=1'])
-  if arch == 'x86':
-    defines.append(['WIN32', '_WIN32'])
-  else:
-    defines.append(['WIN64', '_WIN64'])
-    if release >= 16:
-      defines.append('MAXON_TARGET_64BIT')
-    else:
-      defines.append('__C4D_64BIT')
-  if release <= 15:
-    defines.switch('debug',
-      enabled=['DEBUG', '_DEBUG'],
-      disabled=['NDEBUG'])
-  else:
-    defines.append(['MAXON_TARGET_WINDOWS', 'MAXON_API'])
-    defines.switch('debug',
-      enabled=['MAXON_TARGET_DEBUG'])
-  defines.switch('legacy_api', enabled='__LEGACY_API')
-
-  cxx = CommandBuilder()
-  cxx.append('cl /nologo /c /W4 /WX- /MP /Gm- /Gs /Gy- /fp:precise /Zc:wchar_t- '
-    '/Gd /TP /wd4062 /wd4100 /wd4127 /wd4131 /wd4201 /wd4210 /wd4242 /wd4244 '
-    '/wd4245 /wd4305 /wd4310 /wd4324 /wd4355 /wd4365 /wd4389 /wd4505 /wd4512 '
-    '/wd4611 /wd4706 /wd4718 /wd4740 /wd4748 /wd4996 /FC /errorReport:prompt '
-    '/vmg /vms /w44263 /we4264'.split())
-  if _compiler.version and _compiler.version >= 'v18':
-    cxx.append('/FS')  # required if multiple processes write to the PDB file (since v18)
-  cxx.switch('exceptions', enabled=['/EHsc'])
-  cxx.switch('debug',
-    enabled=['/Od', '/Zi', '/RTC1'],
-    disabled=['/Ox', '/Oy-', '/Oi', '/Ob2', '/Ot', '/GF'])
-  @cxx.append
-  def _cxx_msvc_runtime_library(options):
-    debug = options.get('debug', False)
-    lib = options.get('msvc_runtime_library', _default_runtime_lib)
-    if lib == 'static':
-      return ['/MTd' if debug else '/MD']
-    elif lib == 'dynamic':
-      return ['/MDd' if debug else '/MD']
-    else:
-      raise ValueError('invalid msvc_runtime_library: {!r}'.format(lib))
-  cxx.append(['%%in', '/Fo%%out'])
-
-  ar = CommandBuilder(['lib', '/nologo', '/OUT:%%out', '%%in'])
-
-  link = CommandBuilder(['link', '/nologo', '/DLL', '/OUT:%%out'])
-  link.switch('debug', enabled='/debug')
-  link.append('%%in')
-
-elif platform.id == 'mac':
-  if arch != 'x86_64':
-    error("unexpected compiler architecture '{}'".format(arch))
-  cdl = lambda x: addsuffix(x, '.dylib')
-
-  cinc = lambda l: [['-I', x] for x in l]
-  cdef = lambda l: [['-D', x] for x in l]
-  obj_out = lambda x: ['-o', x]
-  bin_out = lambda x: ['-o', x]
-
-  _default_stdlib = 'libstdc++' if release <= 15 else 'libc++'
-
-  defines = CommandBuilder()
-  defines.switch('legacy_api', enabled='__LEGACY_API')
-  if release <= 15:
-    # All other defines will be set by ge_mac<_debug>_flags.h
-    defines.append('C4D_COCOA')
-  else:
-    # todo: Is it also the same for R17 or does this apply to R16 only?
-    defines.append(['__MAC', '__64BIT', 'MAXON_TARGET_OSX',
-      'MAXON_TARGET_64BIT', 'MAXON_API'])
-    defines.switch('debug',
-      enabled='MAXON_TARGET_DEBUG',
-      disabled='MAXON_TARGET_RELEASE')
-
-  cxx = CommandBuilder()
-  if release <= 15:
-    cxx.append('clang++ -c -arch x86_64 '
-      '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
-      '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
-      '-fno-rtti -fpascal-strings '
-      '-Wno-missing-field-initializers -Wno-missing-prototypes '
-      '-Wno-non-virtual-dtor -Woverloaded-virtual -Wno-exit-time-destructors '
-      '-Wmissing-braces -Wparentheses -Wno-switch -Wunused-function '
-      '-Wunused-label -Wno-unused-parameter -Wunused-variable -Wunused-value '
-      '-Wno-empty-body -Wno-uninitialized -Wunknown-pragmas -Wno-shadow '
-      '-Wno-four-char-constants -Wno-conversion -Wno-constant-conversion '
-      '-Wno-int-conversion -Wno-bool-conversion -Wno-enum-conversion '
-      '-Wno-shorten-64-to-32 -Wno-newline-eof -Wno-c++11-extensions '
-      '-fasm-blocks -fstrict-aliasing -Wdeprecated-declarations '
-      '-Wno-invalid-offsetof -mmacosx-version-min=10.6 -msse3 '
-      '-fvisibility=hidden -fvisibility-inlines-hidden -Wno-sign-conversion '
-      '-Wno-logical-op-parentheses -fno-math-errno'.split())
-  else:
-    cxx.append('clang++ -c -arch x86_64 -fmessage-length=0 '
-      '-fdiagnostics-show-note-include-stack '
-      '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
-      '-fno-rtti -fpascal-strings -Wmissing-field-initializers '
-      '-Wmissing-prototypes -Wdocumentation -Wno-non-virtual-dtor '
-      '-Woverloaded-virtual -Wno-exit-time-destructors -Wmissing-braces '
-      '-Wparentheses -Wno-switch -Wunused-function -Wunused-label '
-      '-Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body '
-      '-Wuninitialized -Wunknown-pragmas -Wshadow -Wno-four-char-constants '
-      '-Wno-conversion -Wconstant-conversion -Wint-conversion '
-      '-Wbool-conversion -Wenum-conversion -Wsign-compare -Wshorten-64-to-32 '
-      '-Wno-newline-eof -Wno-c++11-extensions -fasm-blocks -fstrict-aliasing '
-      '-Wdeprecated-declarations -Winvalid-offsetof -mmacosx-version-min=10.7 '
-      '-msse3 -fvisibility=hidden -fvisibility-inlines-hidden '
-      '-Wno-sign-conversion -fno-math-errno'.split())
-  cxx.switch('exceptions', disabled=['-fno-exceptions'])
-  cxx.switch('debug', disabled=['-O3'], enabled=['-g', '-O0'])
-  if release <= 15:
-    cxx.switch('debug',
-      enabled=['-include', join(source_dir, 'ge_mac_debug_flags.h')],
-      disabled= ['-include', join(source_dir, 'ge_mac_flags.h')])
-  cxx.append(['%%in', '-o', '%%out'])
-  @cxx.append
-  def _cxx_stdlib(options):
-    stdlib = options.get('stdlib', _default_stdlib)
-    if stdlib not in ('libc++', 'libstdc++'):
-      raise ValueError('invalid stdlib: {!r}'.format(stdlib))
-    return ['-stdlib=' + stdlib]
-
-  ar = CommandBuilder(['ar', 'rcs', '%%out', '%%in'])
-
-  link = CommandBuilder(['clang++', '-shared'])
-  link.append(_cxx_stdlib)
-  link.switch('debug', enabled='-g')
-  link.append(['%%in', '-o', '%%out'])
-
-else:
-  assert False
-
-# =====================================================================
 #   Determine application path
 # =====================================================================
 
@@ -320,199 +160,309 @@ else:
 debug_args = ['-debug', '-g_alloc=debug', '-g_console=true']
 
 # =====================================================================
-#   Rules
+#   Compiler settings
 # =====================================================================
 
-def cxx_objects(sources, includes=(), defines=(), additional_flags=(),
-    objects=None, objects_dir=None, base_dir=None, module=None, **options):
-  ''' Comple the C++ *sources* into object files.
+class MsvcCompiler(Translator):
 
-  Options:
-    debug (bool): Automatically read from the calling module if omitted.
-    legacy_api (bool): True if the `__LEGACY_API` macro should be defined.
-    msvc_runtime_library (str): The runtime library to use on Windows.
-      Valid values are `"dynamic"` and `"static"`. The default depends
-      on the Cinema 4D release.
-    stdlib (str): The name of the standard library to link with on Mac OS.
-  '''
+  def __init__(self, arch, release, debug=False, **kwargs):
+    super().__init__(arch=arch, release=release, debug=debug, **kwargs)
+    self.compiler_info = load_module('compiler.msvc').CxxCompiler()
+    self.compiler_info.detect()
 
-  if not sources:
-    raise ValueError('no sources specified')
+  def _validate(self, arch, release, msvc_runtime_library=None, **kwargs):
+    assert arch in ('x86', 'x64'), arch
+    assert release in range(13, 18), release
 
-  valid_options = 'debug legacy_api msvc_runtime_library stdlib'
-  craftr.utils.accept_keys(options, valid_options, 'option')
-  module = craftr.utils.get_calling_module(module)
-  options.setdefault('debug', module.get('debug', False))
+    if msvc_runtime_library is None:
+      msvc_runtime_library = 'static' if release <= 15 else 'dynamic'
+      self.result.options['msvc_runtime_library'] = msvc_runtime_library
+    assert msvc_runtime_library in ('static', 'dynamic'), msvc_runtime_library
 
-  if not all(x.endswith('.cpp') for x in sources):
-    raise ValueError('can only compile .cpp files')
+  def _validate_compile_100defines(self, arch, release, debug, defines=(),
+      legacy_api=False, **kwargs):
+    self.result.options['defines'] = defines = list(defines)
 
-  if objects is None:
-    if objects_dir is None:
-      build_dir = module.get('build_dir', None)
-      if build_dir is None:
-        raise ValueError('build_dir not defined')
-      objects_dir = join(build_dir, 'obj')
-    if base_dir is None:
-      base_dir = craftr.utils.path.commonpath(sources)
-    objects = move(obj(rmvsuffix(sources)), base_dir, objects_dir)
-
-  if len(objects) != len(sources):
-    raise ValueError('len(objects) != len(sources)')
-
-  includes = autoexpand([self.includes, includes])
-  defines = autoexpand([self.defines(**options), defines])
-  flags = cxx(**options)
-  flags.extend(cinc(includes))
-  flags.extend(cdef(defines))
-  flags.extend(additional_flags)
-
-  return module.target(inputs=sources, outputs=objects,
-    command=flags, foreach=True, meta_type='objects', meta_includes=includes,
-    meta_defines=defines, meta_additional_flags=additional_flags,
-    description='Building Object %%out')
-
-
-def cxx_plugin(filename, inputs=None, libs=(), external_libs=(),
-    additional_flags=(), module=None, **options):
-  ''' Generate a Cinema 4D plugin from the specified *inputs*. The
-  *inputs* may be a list of object files or targets. If a target is
-  specified, the meta value `"type"` is used to determine wether it
-  lists object files or a library file to link with.
-
-  Arguments:
-    filename (str): The name of the plugin file. If a relative path is
-      given, it will be placed in the calling module's project dir.
-    inputs (list of {Target, list of str}): List of inputs. An input
-      can be a Target or a list of object filenames. A target can be
-      an object target or a library target.
-    libs (list of str): A list of library filenames that are required
-      to link the plugin dynamic library. The libraries listed here
-      are considered to be buildable by the build system.
-    external_libs (list of str): A list of library filenames that are
-      to be linked with the plugin dynamic library. These are not
-      considered to be buildable by the build system.
-    additional_flags (list of str): A list of additional flags for
-      the linker.
-    module (Module): The module to declare the target in. Defaults
-      to the calling module.
-    **options: See the #Options section.
-  Options:
-    debug (bool): Automatically read from the calling module if omitted.
-    stdlib (str): The name of the standard library to link with on Mac OS.
-  '''
-
-  if not filename:
-    raise ValueError('no filename specified')
-  if not inputs:
-    raise ValueError('no inputs specified')
-
-  valid_options = 'debug stdlib'
-  craftr.utils.accept_keys(options, valid_options, 'option')
-  module = craftr.utils.get_calling_module(module)
-  options.setdefault('debug', module.get('debug', False))
-
-  objects = []
-  libs = autoexpand(libs)
-  for input_ in inputs:
-    if isinstance(input_, craftr.runtime.Target):
-      ttype = input_.meta.get('type')
-      if ttype == 'objects':
-        objects.append(input_.outputs)
-      elif ttype == 'library':
-        if len(input_.outputs) != 1:
-          message = "expected 1 output filename for library target ({!r})"
-          raise ValueError(message.format(input_.identifier))
-        libs.append(input_.outputs[0])
-      else:
-        message = "not sure what to do with target {!r}"
-        raise ValueError(message.format(input_.identifier))
+    if release >= 15:
+      defines += ['MAXON_API', 'MAXON_TARGET_WINDOWS']
+      defines += ['MAXON_TARGET_DEBUG'] if debug else ['MAXON_TARGET_RELEASE']
+      if arch == 'x64':
+        defines += ['MAXON_TARGET_64BIT']
     else:
-      objects.extend(autoexpand(_input))
-
-  if not os.path.isabs(filename):
-    filename = os.path.join(module.get('project_dir'), filename)
-  filename = self.cdl(filename)
-
-  libs = list(libs)
-  libs.append(Library.outputs[0])
-
-  flags = link(**options)
-  flags.extend(libs)
-  flags.extend(external_libs)
-  flags.extend(additional_flags)
-  return module.target(inputs=objects, outputs=[filename],
-    requires=libs, command=flags, meta_type='c4d_plugin',
-    description='Linking C4D Plugin %%out')
-
-
-def cxx_library(inputs, filename, includes=(), library_dir=None,
-    additional_flags=(), module=None):
-  ''' Create a static library with the specified *name* in the
-  *library_dir* from the *inputs*. All inputs must be object files or
-  targets that generate object files.
-
-  Arguments:
-    target_name (str): The name of the target. Automatically deduced
-      using Target Name Deduction if omitted.
-    filename (str): The name of the library. An absolute path can be
-      specified here. The filename must not have a suffix, it is added
-      automatically.
-    inputs (list of {Target, list of str}): List of object targets or
-      object file names to create the library from.
-    includes (list of str): A list of include directories that must
-      be used to use the library.
-    library_dir (str): The output directory of the library. If not
-      specified, it will be derived from the calling modules build
-      directory.
-    additional_flags (list of str): Additional flags for the archiver.
-    module (Module): A module to declare the target for. Defaults to
-      the calling module.
-  '''
-
-  if not inputs:
-    raise ValueError('no inputs specified')
-
-  module = craftr.utils.get_calling_module(module)
-  objects = []
-  for input_ in inputs:
-    if isinstance(input_, craftr.runtime.Target):
-      ttype = input_.meta.get('type')
-      if ttype == 'objects':
-        objects.extend(input_.outputs)
+      defines += ['__PC']
+      defines += ['_DEBUG', 'DEBUG'] if defines else ['NDEBUG']
+      if arch == 'x64':
+        defines += ['__C4D_64BIT', 'WIN64', '_WIN64']
       else:
-        message = "not sure what to do with target {!r}"
-        raise ValueError(message.format(input_.identifier))
+        defines += ['WIN32', '_WIN32']
+
+    if legacy_api:
+      defines += ['__LEGACY_API']
+
+  def _translate_compile_100base(self, arch, release, debug, msvc_runtime_library,
+      includes=(), defines=(), additional_flags=(), exceptions=False, **kwargs):
+
+    self.result.program = self.compiler_info.program
+    self.result.command += ('/nologo /c /W4 /WX- /MP /Gm- /Gs /Gy- '
+      '/fp:precise /Zc:wchar_t- /Gd /TP /wd4062 /wd4100 /wd4127 /wd4131 '
+      '/wd4201 /wd4210 /wd4242 /wd4244 /wd4245 /wd4305 /wd4310 /wd4324 '
+      '/wd4355 /wd4365 /wd4389 /wd4505 /wd4512 /wd4611 /wd4706 /wd4718 '
+      '/wd4740 /wd4748 /wd4996 /FC /errorReport:prompt /vmg /vms /w44263 '
+      '/we4264').split()
+
+    if self.compiler_info.version and self.compiler_info.version >= 'v18':
+      self.result.command += ['/FS']  # required if multiple processes write to the PDB file (since v18)
+
+    if msvc_runtime_library == 'dynamic':
+      self.result.command += ['/MTd' if debug else '/MT']
+    elif msvc_runtime_library == 'static':
+      self.result.command += ['/MDd' if debug else '/MD']
+
+    if debug:
+      self.result.command += ['/Od', '/Zi', '/RTC1']
     else:
-      objects.extend(autoexpand(input_))
+      self.result.command += ['/Ox', '/Oy-', '/Oi', '/Ob2', '/Ot', '/GF']
 
-  if not filename:
-    raise ValueError('filename must not be empty')
+    if exceptions:
+      self.result.command += ['/EHsc']
 
-  if not os.path.isabs(filename):
-    if not library_dir:
-      build_dir = module.get('build_dir', None)
-      if build_dir is None:
-        raise ValueError('build_dir not defined')
-      library_dir = build_dir
-    filename = os.path.join(library_dir, filename)
-  filename = lib(filename)
+    self.result.command += ['/D{}'.format(x) for x in defines]
+    self.result.command += ['/I{}'.format(x) for x in includes]
+    self.result.command.extend(additional_flags)
 
-  includes = autoexpand(includes)
-  return module.target(inputs=objects, outputs=[filename],
-    command=ar(), meta_type='library', meta_includes=includes,
-    description='Creating Library %%out')
+  def _translate_compile_110autodeps(self, autodeps=True, **kwargs):
+    if autodeps:
+      self.result.command += ['/showIncludes']
+      self.result.meta['deps'] = 'msvc'
+      self.result.meta['msvc_deps_prefix'] = self.compiler_info.msvc_deps_prefix
+
+  def _translate_compile_200inputs(self, **kwargs):
+    self.result.command += ['%%in', '/Fo%%out']
+
+  def _translate_lib(self, additional_flags=(), **kwargs):
+    self.result.program = 'lib'
+    self.result.command += ['/nologo', '/OUT:%%out', '%%in']
+    self.result.command.extend(additional_flags)
+
+  def _translate_dll(self, additional_flags=(), **kwargs):
+    self.result.program = 'link'
+    self.result.command += ['/nologo', '/DLL', '/OUT:%%out']
+    if debug:
+      self.result.command += ['/debug']
+    self.result.command += ['%%in']
+
+  def cdl(self, fn):
+    return addsuffix(fn, '.cdl' if self['arch'] == 'x86' else '.cdl64')
+
+  def obj(self, fn):
+    return addsuffix(fn, '.obj')
+
+  def bin(self, fn):
+    return addsuffix(fn, '.exe')
+
+  def dll(self, fn):
+    return addsuffix(fn, '.dll')
+
+  def lib(self, fn):
+    return addsuffix(fn, '.lib')
 
 
-# =====================================================================
-#   SDK Targets
-# =====================================================================
+class ClangCompiler(Translator):
 
-Objects = cxx_objects(
+  def __init__(self, arch, release, debug=False, **kwargs):
+    super().__init__(arch=arch, release=release, debug=debug, **kwargs)
+    self.compiler_info = load_module('compiler.clang').CxxCompiler()
+    self.compiler_info.detect()
+
+  def _validate(self, arch, release, stdlib=None, **kwargs):
+    assert arch == 'x86_64', arch
+    assert release in range(13, 18)
+
+    if stdlib is None:
+      stdlib = 'libstdc++' if release <= 15 else 'libc++'
+      self.result.options['stdlib'] = stdlib
+    assert stdlib in ('libstdc++', 'libc++')
+
+  def _validate_compile_050defines(self, arch, release, debug, defines=(),
+      legacy_api=False, **kwargs):
+    self.result.options['defines'] = defines = list(defines)
+
+    if release >= 15:
+      defines += ['MAXON_API', 'MAXON_TARGET_OSX']
+      defines += ['MAXON_TARGET_DEBUG'] if debug else ['MAXON_TARGET_RELEASE']
+      if arch == 'x86_64':
+        defines += ['MAXON_TARGET_64BIT']
+    else:
+      defines += ['C4D_COCOA', '__MAC']  # other flags set by ge_mac_flags.h
+      defines += ['_DEBUG', 'DEBUG'] if defines else ['NDEBUG']
+      if arch == 'x86_64':
+        defines += ['__C4D_64BIT',]
+
+    if legacy_api:
+      defines += ['__LEGACY_API']
+
+  def _translate_compile_100base(self, arch, release, debug, stdlib,
+      includes=(), defines=(), additional_flags=(), exceptions=False, **kwargs):
+
+    self.result.program = self.compiler_info.program
+    if release <= 15:
+      self.result.command += (
+        '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
+        '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
+        '-fno-rtti -fpascal-strings '
+        '-Wno-missing-field-initializers -Wno-missing-prototypes '
+        '-Wno-non-virtual-dtor -Woverloaded-virtual -Wno-exit-time-destructors '
+        '-Wmissing-braces -Wparentheses -Wno-switch -Wunused-function '
+        '-Wunused-label -Wno-unused-parameter -Wunused-variable -Wunused-value '
+        '-Wno-empty-body -Wno-uninitialized -Wunknown-pragmas -Wno-shadow '
+        '-Wno-four-char-constants -Wno-conversion -Wno-constant-conversion '
+        '-Wno-int-conversion -Wno-bool-conversion -Wno-enum-conversion '
+        '-Wno-shorten-64-to-32 -Wno-newline-eof -Wno-c++11-extensions '
+        '-fasm-blocks -fstrict-aliasing -Wdeprecated-declarations '
+        '-Wno-invalid-offsetof -mmacosx-version-min=10.6 -msse3 '
+        '-fvisibility=hidden -fvisibility-inlines-hidden -Wno-sign-conversion '
+        '-Wno-logical-op-parentheses -fno-math-errno').split()
+    else:
+      self.result.command += (
+        '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
+        '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
+        '-fno-rtti -fpascal-strings -Wmissing-field-initializers '
+        '-Wmissing-prototypes -Wdocumentation -Wno-non-virtual-dtor '
+        '-Woverloaded-virtual -Wno-exit-time-destructors -Wmissing-braces '
+        '-Wparentheses -Wno-switch -Wunused-function -Wunused-label '
+        '-Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body '
+        '-Wuninitialized -Wunknown-pragmas -Wshadow -Wno-four-char-constants '
+        '-Wno-conversion -Wconstant-conversion -Wint-conversion '
+        '-Wbool-conversion -Wenum-conversion -Wsign-compare -Wshorten-64-to-32 '
+        '-Wno-newline-eof -Wno-c++11-extensions -fasm-blocks -fstrict-aliasing '
+        '-Wdeprecated-declarations -Winvalid-offsetof -mmacosx-version-min=10.7 '
+        '-msse3 -fvisibility=hidden -fvisibility-inlines-hidden '
+        '-Wno-sign-conversion -fno-math-errno').split()
+
+    if not exceptions:
+      self.result.command += ['-fno-exceptions']
+
+    if release <= 15:
+      if debug:
+        self.result.command += ['-include', join(source_dir, 'ge_mac_debug_flags.h')]
+      else:
+        self.result.command += ['-include', join(source_dir, 'ge_mac_flags.h')]
+
+    self.result.command += ['-stdlib={}'.format(stdlib)]
+    self.result.command += ['-O3'] if debug else ['-g', '-O0']
+    self.result.command += ['-D{}'.format(x) for x in defines]
+    self.result.command += ['-I{}'.format(x) for x in includes]
+
+  def _translate_compile_110autodeps(self, autodeps=True, depfile=None, **kwargs):
+    if not depfile:
+      depfile = '%%out.d'
+    if autodeps:
+      self.result.command += ['-MMD', '-MF', depfile]
+      self.result.meta['deps'] = 'gcc'
+      self.result.meta['depfile'] = depfile
+
+  def _translate_compile_200inputs(self, **kwargs):
+    self.result.command += ['-c', '%%in', '-o', '%%out']
+
+  def _translate_lib(self, additional_flags=(), **kwargs):
+    self.result.program = 'ar'
+    self.result.command += ['rcs']
+    self.result.command.extend(additional_flags)
+    self.result.command += ['%%out', '%%in']
+
+  def _translate_dll(self, stdlib, additional_flags=(), **kwargs):
+    self.result.program = self.compiler_info.program
+    self.result.command += ['-shared', '-stdlib={}'.format(stdlib)]
+    if debug:
+      self.result.command += ['-g']
+    self.result.command += ['%%in', '-o', '%%out']
+
+  def cdl(self, fn):
+    return addsuffix(fn, '.dylib')
+
+  def obj(self, fn):
+    return addsuffix(fn, '.o')
+
+  def bin(self, fn):
+    return fn
+
+  def dll(self, fn):
+    return addsuffix(fn, '.dylib')
+
+  def lib(self, fn):
+    return addsuffix(addprefix(fn, 'lib'), '.a')
+
+
+if is_windows:
+  cxx = MsvcCompiler(arch, release, debug, includes=includes)
+elif is_mac:
+  cxx = ClangCompiler(arch, release, debug, includes=includes)
+
+
+def objects(sources, src_dir=None, obj_dir='obj', module=None, options=None, **kwargs):
+  module = get_calling_module(module)
+  options = options or {}
+  src_dir = src_dir or commonpath(sources)
+  obj_dir = join(module.identifier, obj_dir)
+  objects = cxx.obj(rmvsuffix(move(sources, src_dir, obj_dir)))
+  result = cxx.translate('_compile', **options)
+  return module.target(
+    inputs=sources,
+    outputs=objects,
+    foreach=True,
+    description = 'Building Object %%out',
+    command=result,
+    meta_type='objects',
+    meta_deps=result.meta.get('deps'),
+    meta_depfile=result.meta.get('depfile'),
+    **kwargs
+  )
+
+
+def static_library(filename, inputs, module=None, includes=(), options=None, **kwargs):
+  module = get_calling_module(module)
+  options = options or {}
+  result = cxx.translate('_lib', **options)
+  filename = normpath(filename, module.identifier)
+  return module.target(
+    inputs=inputs,
+    outputs=cxx.lib(filename),
+    description = 'Building Library %%out',
+    command=result,
+    meta_type='static_library',
+    meta_includes=autoexpand(includes),
+    **kwargs
+  )
+
+
+def plugin(filename, inputs, module=None, options=None, **kwargs):
+  module = get_calling_module(module).locals
+  options = options or {}
+  options['includes'] = includes = list(options.get('includes', []))
+  options['defines'] = includes = list(options.get('defines', []))
+  for item in inputs:
+    if isinstance(item, Target):
+      includes.extend(item.meta.get('includes', []))
+      includes.extend(item.meta.get('defines', []))
+  result = cxx.translate('_dll', **options)
+  return module.target(
+    inputs=inputs,
+    outputs=cxx.cdl(filename),
+    description = 'Building Plugin %%out',
+    command=result,
+    meta_type='shared_library',
+    meta_deps=result.meta.get('deps'),
+    meta_depfile=result.meta.get('depfile'),
+    **kwargs
+  )
+
+
+object_files = objects(
   sources = sources,
 )
 
-Library = cxx_library(
+library = static_library(
   filename = 'c4dsdk',
-  inputs = [Objects],
+  inputs = object_files,
+  includes = includes,
 )

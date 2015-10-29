@@ -183,13 +183,13 @@ class MsvcCompiler(Translator):
       legacy_api=False, **kwargs):
     self.result.options['defines'] = defines = list(defines)
 
+    defines += ['__PC']
     if release >= 15:
       defines += ['MAXON_API', 'MAXON_TARGET_WINDOWS']
       defines += ['MAXON_TARGET_DEBUG'] if debug else ['MAXON_TARGET_RELEASE']
       if arch == 'x64':
         defines += ['MAXON_TARGET_64BIT']
     else:
-      defines += ['__PC']
       defines += ['_DEBUG', 'DEBUG'] if defines else ['NDEBUG']
       if arch == 'x64':
         defines += ['__C4D_64BIT', 'WIN64', '_WIN64']
@@ -287,13 +287,13 @@ class ClangCompiler(Translator):
       legacy_api=False, **kwargs):
     self.result.options['defines'] = defines = list(defines)
 
+    defines += ['C4D_COCOA', '__MAC']
     if release >= 15:
       defines += ['MAXON_API', 'MAXON_TARGET_OSX']
       defines += ['MAXON_TARGET_DEBUG'] if debug else ['MAXON_TARGET_RELEASE']
       if arch == 'x86_64':
         defines += ['MAXON_TARGET_64BIT']
     else:
-      defines += ['C4D_COCOA', '__MAC']  # other flags set by ge_mac_flags.h
       defines += ['_DEBUG', 'DEBUG'] if defines else ['NDEBUG']
       if arch == 'x86_64':
         defines += ['__C4D_64BIT',]

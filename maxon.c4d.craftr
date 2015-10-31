@@ -226,8 +226,8 @@ class MsvcCompiler(Translator):
     if exceptions:
       self.result.command += ['/EHsc']
 
-    self.result.command += ['/D{}'.format(x) for x in defines]
-    self.result.command += ['/I{}'.format(x) for x in includes]
+    self.result.command += ['/D{}'.format(x) for x in autodeps(defines)]
+    self.result.command += ['/I{}'.format(x) for x in autodeps(includes)]
     self.result.command.extend(additional_flags)
 
   def _translate_compile_110autodeps(self, autodeps=True, **kwargs):
@@ -350,8 +350,8 @@ class ClangCompiler(Translator):
 
     self.result.command += ['-stdlib={}'.format(stdlib)]
     self.result.command += ['-O3'] if debug else ['-g', '-O0']
-    self.result.command += ['-D{}'.format(x) for x in defines]
-    self.result.command += ['-I{}'.format(x) for x in includes]
+    self.result.command += ['-D{}'.format(x) for x in autoexpand(defines)]
+    self.result.command += ['-I{}'.format(x) for x in autoexpand(includes)]
 
   def _translate_compile_110autodeps(self, autodeps=True, depfile=None, **kwargs):
     if not depfile:
@@ -402,6 +402,7 @@ elif is_mac:
 def objects(sources, src_dir=None, obj_dir='obj', module=None, options=None, **kwargs):
   module = get_calling_module(module)
   options = options or {}
+  sources = autoexpand(sources)
   src_dir = src_dir or commonpath(sources)
   obj_dir = join(module.identifier, obj_dir)
   objects = cxx.obj(rmvsuffix(move(sources, src_dir, obj_dir)))
@@ -440,6 +441,9 @@ def plugin(filename, inputs, module=None, options=None, **kwargs):
   options = options or {}
   options['includes'] = includes = list(options.get('includes', []))
   options['defines'] = includes = list(options.get('defines', []))
+  inputs = list(inputs)
+  if library not in inputs:
+    inputs.append(library)
   for item in inputs:
     if isinstance(item, Target):
       includes.extend(item.meta.get('includes', []))

@@ -226,8 +226,8 @@ class MsvcCompiler(Translator):
     if exceptions:
       self.result.command += ['/EHsc']
 
-    self.result.command += ['/D{}'.format(x) for x in autodeps(defines)]
-    self.result.command += ['/I{}'.format(x) for x in autodeps(includes)]
+    self.result.command += ['/D{}'.format(x) for x in autoexpand(defines)]
+    self.result.command += ['/I{}'.format(x) for x in autoexpand(includes)]
     self.result.command.extend(additional_flags)
 
   def _translate_compile_110autodeps(self, autodeps=True, **kwargs):

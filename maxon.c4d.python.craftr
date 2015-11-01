@@ -244,10 +244,10 @@ def symbols_format(plugin_dir, outfile, fmt):
     symbols, masked = parse_symbols(filename)
     for symbol, value in masked:
       print("Warning ({}): {} ({}) masked".format(
-        os.path.relpath(filename), symbol), value, file=sys.stderr)
+        os.path.relpath(filename), symbol, value), file=sys.stderr)
     for symbol, value in symbols.items():
       has_value, source = dest.get(symbol, (None, None))
-      if source is not None:
+      if source is not None and has_value != value:
         print("Warning ({}): {} ({}) masking same symbol from {} ({})".format(
           os.path.relpath(filename), symbol, value, os.path.relpath(source),
           has_value), file=sys.stderr)

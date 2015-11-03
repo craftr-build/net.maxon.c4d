@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+load_module('rules')
 load_module('platform')
 is_windows = (platform.id == 'win')
 is_mac = (platform.id == 'mac')
@@ -58,12 +59,12 @@ if not defined('release'):
     release = 16
   del match
 
-if platform.id == 'win':
+if is_windows:
   _compiler = load_module('compiler.msvc').CxxCompiler()
-elif platform.id == 'mac':
+elif is_mac:
   _compiler = load_module('compiler.clang').CxxCompiler()
 else:
-  error("unsupported OS '{}'".format(platform.name))
+  assert False
 
 if not defined('arch'):
   _compiler.detect(silent=session.action != 'export')
@@ -122,14 +123,14 @@ if defined('python_ver'):
   else:
     python_res = join(resource_dir, 'modules', 'python', 'res')
 
-  if platform.id == 'win':
+  if is_windows:
     python_arch = '86' if arch == 'x86' else '64'
     python_fw = join(python_res, 'Python.win' + python_arch + '.framework')
     python_lib = 'python' + python_ver.replace('.', '')
     python_lib_path = join(python_fw, 'libs')
     python_lib_full = join(python_lib_path, python_lib + '.lib')
     python_include = join(python_fw, 'include')
-  elif platform.id == 'mac':
+  elif is_mac:
     python_fw = join(python_res, 'Python.osx.framework')
     python_lib = 'Python.osx'
     python_lib_path = python_fw
@@ -142,7 +143,7 @@ if defined('python_ver'):
 #   Determine application path
 # =====================================================================
 
-if platform.id == 'win':
+if is_windows:
   if arch == 'x64':
     if release < 16:
       app = join(path, 'CINEMA 4D 64 Bit.exe')
@@ -152,7 +153,7 @@ if platform.id == 'win':
     app = join(path, 'CINEMA 4D.exe')
   else:
     assert False
-elif platform.id == 'mac':
+elif is_mac:
   app = join(path, 'CINEMA 4D.app/Contents/MacOS/CINEMA 4D')
 else:
   assert False
@@ -397,7 +398,8 @@ if is_windows:
   cxx = MsvcCompiler(arch, release, debug, includes=includes)
 elif is_mac:
   cxx = ClangCompiler(arch, release, debug, includes=includes)
-
+else:
+  assert False
 
 def objects(sources, src_dir=None, obj_dir='obj', module=None, options=None, **kwargs):
   module = get_calling_module(module)
@@ -470,3 +472,16 @@ library = static_library(
   inputs = object_files,
   includes = includes,
 )
+
+run = rules.run(
+  executable = [app],
+  additional_flags = debug_args,
+  no_dependency = True,
+)
+
+if is_mac:
+  lldb = rules.run(
+    executable = ['lldb'],
+    additional_flags = ['--'] + run.commands[0],
+    no_dependency = True,
+  )

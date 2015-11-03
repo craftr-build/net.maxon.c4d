@@ -349,7 +349,7 @@ class ClangCompiler(Translator):
         self.result.command += ['-include', join(source_dir, 'ge_mac_flags.h')]
 
     self.result.command += ['-stdlib={}'.format(stdlib)]
-    self.result.command += ['-O3'] if debug else ['-g', '-O0']
+    self.result.command += ['-g', '-O0'] if debug else ['-O3']
     self.result.command += ['-D{}'.format(x) for x in autoexpand(defines)]
     self.result.command += ['-I{}'.format(x) for x in autoexpand(includes)]
 

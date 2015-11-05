@@ -245,12 +245,14 @@ class MsvcCompiler(Translator):
     self.result.command += ['/nologo', '/OUT:%%out', '%%in']
     self.result.command.extend(additional_flags)
 
-  def _translate_dll(self, additional_flags=(), **kwargs):
+  def _translate_dll(self, additional_flags=(), msvc_link_with=(), **kwargs):
     self.result.program = 'link'
     self.result.command += ['/nologo', '/DLL', '/OUT:%%out']
     if debug:
       self.result.command += ['/debug']
     self.result.command += ['%%in']
+    self.result.command.extend(additional_flags)
+    self.result.command.extend(msvc_link_with)
 
   def cdl(self, fn):
     return addsuffix(fn, '.cdl' if self['arch'] == 'x86' else '.cdl64')
@@ -471,6 +473,7 @@ library = static_library(
   filename = 'c4dsdk',
   inputs = object_files,
   includes = includes,
+  default = True,
 )
 
 run = rules.run(

@@ -4,8 +4,12 @@ import os
 import sys
 import c4d
 
-project_path = os.path.dirname(sys._getframe().f_back.f_globals['__file__'])
-resource = sys._getframe().f_back.f_globals['__res__']
+_frame = sys._getframe(1)
+while _frame and not '__res__' in _frame.f_globals:
+    _frame = _frame.f_back
+
+project_path = os.path.dirname(_frame.f_globals['__file__'])
+resource = _frame.f_globals['__res__']
 
 
 def string(name, *subst):

@@ -203,7 +203,7 @@ class MsvcCompiler(Translator):
   def _translate_compile_100base(self, arch, release, debug, msvc_runtime_library,
       includes=(), defines=(), additional_flags=(), exceptions=False, **kwargs):
 
-    self.result.program = self.compiler_info.program
+    self.result.program = self.compiler_info.options['program']
     self.result.command += ('/nologo /c /W4 /WX- /MP /Gm- /Gs /Gy- '
       '/fp:precise /Zc:wchar_t- /Gd /TP /wd4062 /wd4100 /wd4127 /wd4131 '
       '/wd4201 /wd4210 /wd4242 /wd4244 /wd4245 /wd4305 /wd4310 /wd4324 '
@@ -307,7 +307,7 @@ class ClangCompiler(Translator):
   def _translate_compile_100base(self, arch, release, debug, stdlib,
       includes=(), defines=(), additional_flags=(), exceptions=False, **kwargs):
 
-    self.result.program = self.compiler_info.program
+    self.result.program = self.compiler_info.options['program']
     if release <= 15:
       self.result.command += (
         '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
@@ -374,7 +374,7 @@ class ClangCompiler(Translator):
     self.result.command += ['%%out', '%%in']
 
   def _translate_dll(self, stdlib, additional_flags=(), **kwargs):
-    self.result.program = self.compiler_info.program
+    self.result.program = self.compiler_info.options['program']
     self.result.command += ['-shared', '-stdlib={}'.format(stdlib)]
     if debug:
       self.result.command += ['-g']

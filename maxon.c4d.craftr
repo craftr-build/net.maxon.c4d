@@ -453,6 +453,10 @@ def plugin(filename, inputs, module=None, options=None, **kwargs):
       includes.extend(item.meta.get('includes', []))
       includes.extend(item.meta.get('defines', []))
   result = cxx.translate('_dll', **options)
+
+  # Add the plugin as order only dependency to the run target.
+  run.order_only_deps.append(cxx.cdl(filename))
+
   return module.target(
     inputs=inputs,
     outputs=cxx.cdl(filename),

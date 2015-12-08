@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from . import python
 from craftr import session, platform, expand_inputs, Target
 from craftr.path import join, normpath, glob
 from craftr.utils import fw_merge

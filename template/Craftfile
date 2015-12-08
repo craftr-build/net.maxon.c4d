@@ -3,18 +3,15 @@
 # Copyright (C) <Year> <Name>
 # All rights reserved.
 
-setdefault('debug', False, set_global=True)
-append_search_path('..')
-load_module('maxon.c4d')
+from craftr import session, path
+from craftr.ext.maxon import c4d
 
-objects = maxon.c4d.objects(
-  sources = glob('source/**/*.cpp'),
-  options = dict(
-    includes = [local('plugin'), local('include')],
-  ),
+objects = c4d.objects(
+  sources = path.glob('source/**/*.cpp'),
+  includes = path.local(['plugin', 'include']),
 )
 
-plugin = maxon.c4d.plugin(
-  filename = local('plugin/{}'.format(module.identifier)),
-  inputs = [maxon.c4d.library, objects],
+plugin = c4d.link(
+  output = path.local('plugin/{}'.format(__ident__)),
+  inputs = objects,
 )

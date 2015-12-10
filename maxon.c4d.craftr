@@ -104,7 +104,7 @@ if release <= 15:
   includes += glob(path + '/modules/*/*/res/description')
 else:
   includes += glob(resource_dir + '/modules/*/description')
-includes = list(map(normpath, includes))
+includes = normpath(includes)
 
 # =====================================================================
 #   Embedded Python support
@@ -194,7 +194,7 @@ def _msvc_objects(sources, defines=(), includes=(), frameworks=(),
   if legacy_api:
     defines += ['__LEGACY_API']
 
-  command = [cxx.program] + ('/nologo /c /W4 /WX- /MP /Gm- /Gs /Gy- '
+  command = [cxx['program']] + ('/nologo /c /W4 /WX- /MP /Gm- /Gs /Gy- '
     '/fp:precise /Zc:wchar_t- /Gd /TP /wd4062 /wd4100 /wd4127 /wd4131 '
     '/wd4201 /wd4210 /wd4242 /wd4244 /wd4245 /wd4305 /wd4310 /wd4324 '
     '/wd4355 /wd4365 /wd4389 /wd4505 /wd4512 /wd4611 /wd4706 /wd4718 '
@@ -241,7 +241,7 @@ def _msvc_staticlib(output, inputs, additional_flags=(), name=None, **kwargs):
 
   inputs = expand_inputs(inputs)
   output = gen_output(output, suffix=platform.lib)
-  command = [lib.program, '/nologo', '/OUT:$out', '$in']
+  command = [lib['program'], '/nologo', '/OUT:$out', '$in']
   return target(command, inputs, [output])
 
 
@@ -266,7 +266,7 @@ def _msvc_link(output, inputs, output_type='dll', additional_flags=(),
   external_libs = expand_inputs(external_libs)
   inputs = expand_inputs(inputs) + globals()['library'].outputs
   output = gen_output(output, suffix=suffix)
-  command = [ld.program, '/nologo', '/OUT:$out']
+  command = [ld['program'], '/nologo', '/OUT:$out']
   if output_type == 'dll':
     command += ['/DLL']
   if debug:
@@ -311,7 +311,7 @@ def _clang_objects(sources, defines=(), includes=(), frameworks=(),
   if legacy_api:
     defines += ['__LEGACY_API']
 
-  command = [cxx.program]
+  command = [cxx['program']]
   if release <= 15:
     command += (
       '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
@@ -375,7 +375,7 @@ def _clang_staticlib(output, inputs, additional_flags=(), name=None, **kwargs):
   _warn.unused_kwargs(kwargs)
 
   output = gen_output(output, suffix=platform.lib)
-  command = [lib.program, 'rcs']
+  command = [lib['program'], 'rcs']
   command += additional_flags
   command += ['$out', '$in']
 
@@ -393,7 +393,7 @@ def _clang_link(output, inputs, output_type='dll', stdlib=None, debug=False,
 
   assert output_type in ('bin', 'dll')
   output = gen_output(output, suffix=getattr(platform, output_type))
-  command = [ld.program, '-stdlib=' + stdlib]
+  command = [ld['program'], '-stdlib=' + stdlib]
   if debug:
     command += ['-g']
   command += ['$in', '-o', '$out']

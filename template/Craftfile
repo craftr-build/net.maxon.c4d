@@ -9,7 +9,7 @@ from craftr.ext.maxon import c4d
 
 objects = c4d.objects(
   sources = path.glob('source/**/*.cpp'),
-  includes = path.local(['plugin', 'include']),
+  include = path.local(['plugin', 'include']),
 )
 
 plugin = c4d.link(

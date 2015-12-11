@@ -163,7 +163,7 @@ debug_args = ['-debug', '-g_alloc=debug', '-g_console=true']
 #   Compiler settings
 # =====================================================================
 
-def _msvc_objects(sources, defines=(), includes=(), frameworks=(),
+def _msvc_objects(sources, defines=(), include=(), frameworks=(),
     additional_flags=(), msvc_runtime_library=None, legacy_api=False,
     exceptions=False, autodeps=True, name=None, **kwargs):
   target = Target.Builder(name=name, foreach=True)
@@ -177,7 +177,7 @@ def _msvc_objects(sources, defines=(), includes=(), frameworks=(),
   objects = gen_objects(sources, suffix=platform.obj)
 
   defines = fw_merge(frameworks, 'defines', defines)
-  includes = fw_merge(frameworks, 'includes', includes) + globals()['includes']
+  include = fw_merge(frameworks, 'include', include) + globals()['includes']
 
   defines += ['__PC']
   if release >= 15:
@@ -227,7 +227,7 @@ def _msvc_objects(sources, defines=(), includes=(), frameworks=(),
     command += ['/EHsc']
 
   command += ['/D' + x for x in defines]
-  command += ['/I' + x for x in includes]
+  command += ['/I' + x for x in include]
   command += additional_flags
   command += ['$in', '/Fo$out']
 
@@ -284,7 +284,7 @@ def _clang_get_stdlib():
   return 'libstc++' if release <= 15 else 'libc++'
 
 
-def _clang_objects(sources, defines=(), includes=(), frameworks=(),
+def _clang_objects(sources, defines=(), include=(), frameworks=(),
     additional_flags=(), legacy_api=False, exceptions=False, autodeps=True,
     stdlib=None, name=None, **kwargs):
   target = Target.Builder(name=name, foreach=True)
@@ -298,7 +298,7 @@ def _clang_objects(sources, defines=(), includes=(), frameworks=(),
     stdlib = _clang_get_stdlib()
 
   defines = fw_merge(frameworks, 'defines', defines)
-  includes = fw_merge(frameworks, 'includes', includes)
+  include = fw_merge(frameworks, 'include', include)
 
   defines += ['C4D_COCOA', '__MAC']
   if release >= 15:
@@ -358,7 +358,7 @@ def _clang_objects(sources, defines=(), includes=(), frameworks=(),
   command += ['-stdlib={}'.format(stdlib)]
   command += ['-g', '-O0'] if debug else ['-O3']
   command += ['-D' + x for x in autoexpand(defines)]
-  command += ['-I' + x for x in autoexpand(includes)]
+  command += ['-I' + x for x in autoexpand(include)]
 
   if autodeps:
     target.depfile = '$out.d'
@@ -415,7 +415,6 @@ else:
 
 object_files = objects(
   sources = sources,
-  includes = includes,
 )
 
 library = staticlib(

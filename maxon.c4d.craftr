@@ -260,11 +260,13 @@ def _msvc_link(output, inputs, output_type='dll', additional_flags=(),
     suffix = getattr(platform, output_type)
 
   libs = fw_merge(frameworks, 'libs', libs)
+  libs += fw_merge(frameworks, 'msvc_libs', msvc_libs)
   libpath = fw_merge(frameworks, 'libpath', libpath)
   external_libs = fw_merge(frameworks, 'external_libs', external_libs)
+  external_libs += globals()['library'].outputs
 
   external_libs = expand_inputs(external_libs)
-  inputs = expand_inputs(inputs) + globals()['library'].outputs
+  inputs = expand_inputs(inputs)
   output = gen_output(output, suffix=suffix)
   command = [ld['program'], '/nologo', '/OUT:$out']
   if output_type == 'dll':

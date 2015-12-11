@@ -33,7 +33,7 @@ import re
 is_windows = (platform.name == 'Windows')
 is_osx = (platform.name == 'Darwin')
 
-if not is_windows and not is_mosx:
+if not is_windows and not is_osx:
   raise EnvironmentError('unsupported platform "{0}"'.format(platform.name))
 
 env = session.env
@@ -68,11 +68,15 @@ if not release:
 tools = get_platform_toolset()
 cxx = tools.CxxCompiler(detect=True)
 ld = tools.Linker()
-lib = tools.Ar()
-arch = cxx.arch
+lib = tools.Archiver()
+
+if is_windows:
+  arch = cxx.arch
+else:
+  arch = 'x86_64'
 
 print('[maxon.c4d] SDK Version: R{}, Target: {}, Compiler: {} v{}'.format(
-  release, arch, cxx.name, cxx.version))
+  release, arch, cxx.name, getattr(cxx, 'version', None)))
 
 resource_dir = join(path, 'resource')
 if release <= 15:
@@ -296,11 +300,12 @@ def _clang_objects(sources, defines=(), include=(), frameworks=(),
   assert arch == 'x86_64'
   assert release in range(13, 18)
 
+  objects = gen_objects(sources, suffix=platform.obj)
   if stdlib is None:
     stdlib = _clang_get_stdlib()
 
   defines = fw_merge(frameworks, 'defines', defines)
-  include = fw_merge(frameworks, 'include', include)
+  include = fw_merge(frameworks, 'include', include) + globals()['includes']
 
   defines += ['C4D_COCOA', '__MAC']
   if release >= 15:
@@ -313,7 +318,7 @@ def _clang_objects(sources, defines=(), include=(), frameworks=(),
   if legacy_api:
     defines += ['__LEGACY_API']
 
-  command = [cxx['program']]
+  command = [cxx['program'], '-c']
   if release <= 15:
     command += (
       '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
@@ -359,8 +364,8 @@ def _clang_objects(sources, defines=(), include=(), frameworks=(),
 
   command += ['-stdlib={}'.format(stdlib)]
   command += ['-g', '-O0'] if debug else ['-O3']
-  command += ['-D' + x for x in autoexpand(defines)]
-  command += ['-I' + x for x in autoexpand(include)]
+  command += ['-D' + x for x in defines]
+  command += ['-I' + x for x in include]
 
   if autodeps:
     target.depfile = '$out.d'
@@ -385,7 +390,8 @@ def _clang_staticlib(output, inputs, additional_flags=(), name=None, **kwargs):
 
 
 def _clang_link(output, inputs, output_type='dll', stdlib=None, debug=False,
-    additional_flags=(), name=None, **kwargs):
+    libs=(), external_libs=(), additional_flags=(), frameworks=(), name=None,
+    **kwargs):
   target = Target.Builder(name=name)
   _warn_prefix = target.fullname
   _warn.unused_kwargs(kwargs)
@@ -393,14 +399,22 @@ def _clang_link(output, inputs, output_type='dll', stdlib=None, debug=False,
   if stdlib is None:
     stdlib = _clang_get_stdlib()
 
+  libs = fw_merge(frameworks, 'libs', libs)
+  libs.append('c++')
+  external_libs = fw_merge(frameworks, 'external_libs', external_libs)
+  external_libs += globals()['library'].outputs
+
   assert output_type in ('bin', 'dll')
   output = gen_output(output, suffix=getattr(platform, output_type))
   command = [ld['program'], '-stdlib=' + stdlib]
-  if debug:
-    command += ['-g']
+  command += ['-shared'] if output_type == 'dll' else []
+  command += ['-g'] if debug else []
+  command += ['-l' + x for x in libs]
+  command += external_libs
+  command += additional_flags
   command += ['$in', '-o', '$out']
 
-  return target(command, expand_inputs(inputs), [output])
+  return target(command, expand_inputs(inputs), [output], implicit_deps=external_libs)
 
 
 if is_windows:

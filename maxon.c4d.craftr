@@ -1,5 +1,4 @@
-# craftr_module(maxon.c4d)
-#
+# -*- mode: python -*-
 # Copyright (C) 2015 Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,37 +19,44 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-load_module('rules')
-load_module('platform')
-is_windows = (platform.id == 'win')
-is_mac = (platform.id == 'mac')
-if not is_windows and not is_mac:
-  raise EnvironmentError('only Windows and Mac OS are supported')
+from . import python
+from craftr import session, platform, expand_inputs, Target
+from craftr.path import join, normpath, glob
+from craftr.utils import fw_merge
+from craftr.ext.compiler import gen_output, gen_objects, get_platform_toolset
+import craftr.path as _path
+import craftr.warn as _warn
+import os
+import re
 
-import os, re, craftr
 
-# path
-# release
-# arch
-setdefault('debug', False)
+is_windows = (platform.name == 'Windows')
+is_osx = (platform.name == 'Darwin')
 
+if not is_windows and not is_mosx:
+  raise EnvironmentError('unsupported platform "{0}"'.format(platform.name))
+
+env = session.env
+path = env.get('maxon.c4d.path', None)
+release = int(env.get('maxon.c4d.release', 0))
+debug = env.get_first('maxon.c4d.debug', 'debug', default=False)
 mode = 'debug' if debug else 'release'
 
 # =====================================================================
 #   Evaluate pre-conditions and detect Cinema 4D path and release
 # =====================================================================
 
-if defined('path'):
-  path = normpath(path)
-else:
-  path = normpath(__file__ + '/../../..')
+if not path:
+  # We assume that the project folder is inside the Cinema 4D
+  # plugins directory.
+  path = normpath(join(__file__, '../../..'))
 
-if not defined('release'):
+if not release:
   # Try to deduce the release number from the installation path.
   match = re.search('Cinema\s+4D\s+R(\d+)', path, re.I)
   if match:
     release = int(match.group(1))
-  elif os.path.isfile(join(path, 'CINEMA 4D 64 Bit.exe')):
+  elif _path.isfile(join(path, 'CINEMA 4D 64 Bit.exe')):
     # If that didn't work, pre-R16 versions had the Windows executable
     # named like this, and it was also distributed with the Mac version.
     release = 15
@@ -59,22 +65,14 @@ if not defined('release'):
     release = 16
   del match
 
-if is_windows:
-  _compiler = load_module('compiler.msvc').CxxCompiler()
-elif is_mac:
-  _compiler = load_module('compiler.clang').CxxCompiler()
-else:
-  assert False
+tools = get_platform_toolset()
+cxx = tools.CxxCompiler(detect=True)
+ld = tools.Linker()
+lib = tools.Ar()
+arch = cxx.arch
 
-if not defined('arch'):
-  _compiler.detect(silent=session.action != 'export')
-  if _compiler.arch:
-    arch = _compiler.arch
-  else:
-    arch = 'x64'
-
-info('SDK Version: R{}, Target: {}, Compiler: {} v{}'.format(
-  release, arch, _compiler.name, _compiler.version))
+print('[maxon.c4d] SDK Version: R{}, Target: {}, Compiler: {} v{}'.format(
+  release, arch, cxx.name, cxx.version))
 
 resource_dir = join(path, 'resource')
 if release <= 15:
@@ -106,18 +104,19 @@ if release <= 15:
   includes += glob(path + '/modules/*/*/res/description')
 else:
   includes += glob(resource_dir + '/modules/*/description')
-includes = list(map(normpath, includes))
+includes = normpath(includes)
 
 # =====================================================================
 #   Embedded Python support
 # =====================================================================
 
+python_ver = None
 if release >= 17:
   python_ver = '2.7'
 elif release >= 12:
   python_ver = '2.6'
 
-if defined('python_ver'):
+if python_ver:
   if release >= 16:
     python_res = join(resource_dir, 'modules', 'python')
   else:
@@ -130,7 +129,7 @@ if defined('python_ver'):
     python_lib_path = join(python_fw, 'libs')
     python_lib_full = join(python_lib_path, python_lib + '.lib')
     python_include = join(python_fw, 'include')
-  elif is_mac:
+  elif is_osx:
     python_fw = join(python_res, 'Python.osx.framework')
     python_lib = 'Python.osx'
     python_lib_path = python_fw
@@ -153,7 +152,7 @@ if is_windows:
     app = join(path, 'CINEMA 4D.exe')
   else:
     assert False
-elif is_mac:
+elif is_osx:
   app = join(path, 'CINEMA 4D.app/Contents/MacOS/CINEMA 4D')
 else:
   assert False
@@ -164,331 +163,274 @@ debug_args = ['-debug', '-g_alloc=debug', '-g_console=true']
 #   Compiler settings
 # =====================================================================
 
-class MsvcCompiler(Translator):
+def _msvc_objects(sources, defines=(), include=(), frameworks=(),
+    additional_flags=(), msvc_runtime_library=None, legacy_api=False,
+    exceptions=False, autodeps=True, name=None, **kwargs):
+  target = Target.Builder(name=name, foreach=True)
+  _warn_prefix = target.fullname
+  _warn.unused_kwargs(kwargs)
 
-  def __init__(self, arch, release, debug=False, **kwargs):
-    super().__init__(arch=arch, release=release, debug=debug, **kwargs)
-    self.compiler_info = load_module('compiler.msvc').CxxCompiler()
-    self.compiler_info.detect()
+  assert arch in ('x64', 'x86')
+  assert release in range(13, 18)
 
-  def _validate(self, arch, release, msvc_runtime_library=None, **kwargs):
-    assert arch in ('x86', 'x64'), arch
-    assert release in range(13, 18), release
+  sources = expand_inputs(sources)
+  objects = gen_objects(sources, suffix=platform.obj)
 
-    if msvc_runtime_library is None:
-      msvc_runtime_library = 'static' if release <= 15 else 'dynamic'
-      self.result.options['msvc_runtime_library'] = msvc_runtime_library
-    assert msvc_runtime_library in ('static', 'dynamic'), msvc_runtime_library
+  defines = fw_merge(frameworks, 'defines', defines)
+  include = fw_merge(frameworks, 'include', include) + globals()['includes']
 
-  def _validate_compile_100defines(self, arch, release, debug, defines=(),
-      legacy_api=False, **kwargs):
-    self.result.options['defines'] = defines = list(defines)
-
-    defines += ['__PC']
-    if release >= 15:
-      defines += ['MAXON_API', 'MAXON_TARGET_WINDOWS']
-      defines += ['MAXON_TARGET_DEBUG'] if debug else ['MAXON_TARGET_RELEASE']
-      if arch == 'x64':
-        defines += ['MAXON_TARGET_64BIT']
+  defines += ['__PC']
+  if release >= 15:
+    defines += ['MAXON_API', 'MAXON_TARGET_WINDOWS']
+    defines += ['MAXON_TARGET_DEBUG'] if debug else ['MAXON_TARGET_RELEASE']
+    if arch == 'x64':
+      defines += ['MAXON_TARGET_64BIT']
+  else:
+    defines += ['_DEBUG', 'DEBUG'] if defines else ['NDEBUG']
+    if arch == 'x64':
+      defines += ['__C4D_64BIT', 'WIN64', '_WIN64']
     else:
-      defines += ['_DEBUG', 'DEBUG'] if defines else ['NDEBUG']
-      if arch == 'x64':
-        defines += ['__C4D_64BIT', 'WIN64', '_WIN64']
-      else:
-        defines += ['WIN32', '_WIN32']
+      defines += ['WIN32', '_WIN32']
+  if legacy_api:
+    defines += ['__LEGACY_API']
 
-    if legacy_api:
-      defines += ['__LEGACY_API']
+  command = [cxx['program']] + ('/nologo /c /W4 /WX- /MP /Gm- /Gs /Gy- '
+    '/fp:precise /Zc:wchar_t- /Gd /TP /wd4062 /wd4100 /wd4127 /wd4131 '
+    '/wd4201 /wd4210 /wd4242 /wd4244 /wd4245 /wd4305 /wd4310 /wd4324 '
+    '/wd4355 /wd4365 /wd4389 /wd4505 /wd4512 /wd4611 /wd4706 /wd4718 '
+    '/wd4740 /wd4748 /wd4996 /FC /errorReport:prompt /vmg /vms /w44263 '
+    '/we4264').split()
+  if cxx.version >= 'v18':
+    # required for parallel writes to .pdb files.
+    command += ['/FS']
 
-  def _translate_compile_100base(self, arch, release, debug, msvc_runtime_library,
-      includes=(), defines=(), additional_flags=(), exceptions=False, **kwargs):
+  if autodeps:
+    command += ['/showIncludes']
+    target.deps = 'msvc'
+    target.msvc_deps_prefix = cxx.deps_prefix
 
-    self.result.program = self.compiler_info.options['program']
-    self.result.command += ('/nologo /c /W4 /WX- /MP /Gm- /Gs /Gy- '
-      '/fp:precise /Zc:wchar_t- /Gd /TP /wd4062 /wd4100 /wd4127 /wd4131 '
-      '/wd4201 /wd4210 /wd4242 /wd4244 /wd4245 /wd4305 /wd4310 /wd4324 '
-      '/wd4355 /wd4365 /wd4389 /wd4505 /wd4512 /wd4611 /wd4706 /wd4718 '
-      '/wd4740 /wd4748 /wd4996 /FC /errorReport:prompt /vmg /vms /w44263 '
-      '/we4264').split()
+  if msvc_runtime_library is None:
+    msvc_runtime_library = 'static' if release <= 15 else 'dynamic'
+  if msvc_runtime_library == 'dynamic':
+    command += ['/MTd' if debug else '/MT']
+  elif msvc_runtime_library == 'static':
+    command += ['/MDd' if debug else '/MD']
+  else:
+    raise ValueError('invalid msvc_runtime_library: {0!r}'.format(msvc_runtime_library))
 
-    if self.compiler_info.version and self.compiler_info.version >= 'v18':
-      self.result.command += ['/FS']  # required if multiple processes write to the PDB file (since v18)
+  if debug:
+    command += ['/Od', '/Zi', '/RTC1']
+  else:
+    command += ['/Ox', '/Oy-', '/Oi', '/Ob2', '/Ot', '/GF']
 
-    if msvc_runtime_library == 'dynamic':
-      self.result.command += ['/MTd' if debug else '/MT']
-    elif msvc_runtime_library == 'static':
-      self.result.command += ['/MDd' if debug else '/MD']
+  if exceptions:
+    command += ['/EHsc']
 
+  command += ['/D' + x for x in defines]
+  command += ['/I' + x for x in include]
+  command += additional_flags
+  command += ['$in', '/Fo$out']
+
+  return target(command, sources, objects)
+
+
+def _msvc_staticlib(output, inputs, additional_flags=(), name=None, **kwargs):
+  target = Target.Builder(name=name)
+  _warn_prefix = target.fullname
+  _warn.unused_kwargs(kwargs)
+
+  inputs = expand_inputs(inputs)
+  output = gen_output(output, suffix=platform.lib)
+  command = [lib['program'], '/nologo', '/OUT:$out', '$in']
+  return target(command, inputs, [output])
+
+
+def _msvc_link(output, inputs, output_type='dll', additional_flags=(),
+    libs=(), external_libs=(), libpath=(), msvc_libs=(), frameworks=(),
+    name=None, **kwargs):
+  target = Target.Builder(name=name)
+  _warn_prefix = target.fullname
+  _warn.unused_kwargs(kwargs)
+
+  if output_type not in ('bin', 'dll'):
+    raise ValueError('invalid output_type: {0!r}'.format(output_type))
+  if output_type == 'dll':
+    suffix = lambda x: _path.addsuffix(x, '.cdl64' if arch == 'x64' else '.cdl')
+  else:
+    suffix = getattr(platform, output_type)
+
+  libs = fw_merge(frameworks, 'libs', libs)
+  libs += fw_merge(frameworks, 'msvc_libs', msvc_libs)
+  libpath = fw_merge(frameworks, 'libpath', libpath)
+  external_libs = fw_merge(frameworks, 'external_libs', external_libs)
+  external_libs += globals()['library'].outputs
+
+  external_libs = expand_inputs(external_libs)
+  inputs = expand_inputs(inputs)
+  output = gen_output(output, suffix=suffix)
+  command = [ld['program'], '/nologo', '/OUT:$out']
+  if output_type == 'dll':
+    command += ['/DLL']
+  if debug:
+    command += ['/debug']
+  command += _path.addsuffix(libs, '.lib')
+  command += external_libs
+  command += ['/LIBPATH:' + x for x in libpath]
+  command += additional_flags
+  command += ['$in']
+
+  return target(command, inputs, [output], implicit_deps=external_libs)
+
+
+def _clang_get_stdlib():
+  return 'libstc++' if release <= 15 else 'libc++'
+
+
+def _clang_objects(sources, defines=(), include=(), frameworks=(),
+    additional_flags=(), legacy_api=False, exceptions=False, autodeps=True,
+    stdlib=None, name=None, **kwargs):
+  target = Target.Builder(name=name, foreach=True)
+  _warn_prefix = target.fullname
+  _warn.unused_kwargs(kwargs)
+
+  assert arch == 'x86_64'
+  assert release in range(13, 18)
+
+  if stdlib is None:
+    stdlib = _clang_get_stdlib()
+
+  defines = fw_merge(frameworks, 'defines', defines)
+  include = fw_merge(frameworks, 'include', include)
+
+  defines += ['C4D_COCOA', '__MAC']
+  if release >= 15:
+    defines += ['MAXON_API', 'MAXON_TARGET_OSX']
+    defines += ['MAXON_TARGET_DEBUG'] if debug else ['MAXON_TARGET_RELEASE']
+    defines += ['MAXON_TARGET_64BIT']
+  else:
+    defines += ['_DEBUG', 'DEBUG'] if defines else ['NDEBUG']
+    defines += ['__C4D_64BIT']
+  if legacy_api:
+    defines += ['__LEGACY_API']
+
+  command = [cxx['program']]
+  if release <= 15:
+    command += (
+      '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
+      '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
+      '-fno-rtti -fpascal-strings '
+      '-Wno-missing-field-initializers -Wno-missing-prototypes '
+      '-Wno-non-virtual-dtor -Woverloaded-virtual -Wno-exit-time-destructors '
+      '-Wmissing-braces -Wparentheses -Wno-switch -Wunused-function '
+      '-Wunused-label -Wno-unused-parameter -Wunused-variable -Wunused-value '
+      '-Wno-empty-body -Wno-uninitialized -Wunknown-pragmas -Wno-shadow '
+      '-Wno-four-char-constants -Wno-conversion -Wno-constant-conversion '
+      '-Wno-int-conversion -Wno-bool-conversion -Wno-enum-conversion '
+      '-Wno-shorten-64-to-32 -Wno-newline-eof -Wno-c++11-extensions '
+      '-fasm-blocks -fstrict-aliasing -Wdeprecated-declarations '
+      '-Wno-invalid-offsetof -mmacosx-version-min=10.6 -msse3 '
+      '-fvisibility=hidden -fvisibility-inlines-hidden -Wno-sign-conversion '
+      '-Wno-logical-op-parentheses -fno-math-errno').split()
+  else:
+    command += (
+      '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
+      '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
+      '-fno-rtti -fpascal-strings -Wmissing-field-initializers '
+      '-Wmissing-prototypes -Wdocumentation -Wno-non-virtual-dtor '
+      '-Woverloaded-virtual -Wno-exit-time-destructors -Wmissing-braces '
+      '-Wparentheses -Wno-switch -Wunused-function -Wunused-label '
+      '-Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body '
+      '-Wuninitialized -Wunknown-pragmas -Wshadow -Wno-four-char-constants '
+      '-Wno-conversion -Wconstant-conversion -Wint-conversion '
+      '-Wbool-conversion -Wenum-conversion -Wsign-compare -Wshorten-64-to-32 '
+      '-Wno-newline-eof -Wno-c++11-extensions -fasm-blocks -fstrict-aliasing '
+      '-Wdeprecated-declarations -Winvalid-offsetof -mmacosx-version-min=10.7 '
+      '-msse3 -fvisibility=hidden -fvisibility-inlines-hidden '
+      '-Wno-sign-conversion -fno-math-errno').split()
+
+  if not exceptions:
+    command += ['-fno-exceptions']
+
+  if release <= 15:
     if debug:
-      self.result.command += ['/Od', '/Zi', '/RTC1']
+      command += ['-include', join(source_dir, 'ge_mac_debug_flags.h')]
     else:
-      self.result.command += ['/Ox', '/Oy-', '/Oi', '/Ob2', '/Ot', '/GF']
+      command += ['-include', join(source_dir, 'ge_mac_flags.h')]
 
-    if exceptions:
-      self.result.command += ['/EHsc']
+  command += ['-stdlib={}'.format(stdlib)]
+  command += ['-g', '-O0'] if debug else ['-O3']
+  command += ['-D' + x for x in autoexpand(defines)]
+  command += ['-I' + x for x in autoexpand(include)]
 
-    self.result.command += ['/D{}'.format(x) for x in autoexpand(defines)]
-    self.result.command += ['/I{}'.format(x) for x in autoexpand(includes)]
-    self.result.command.extend(additional_flags)
+  if autodeps:
+    target.depfile = '$out.d'
+    target.deps = 'gcc'
+    command += ['-MMD', '-MF', '$depfile']
+  command += ['-c', '$in', '-o', '$out']
 
-  def _translate_compile_110autodeps(self, autodeps=True, **kwargs):
-    if autodeps:
-      self.result.command += ['/showIncludes']
-      self.result.meta['deps'] = 'msvc'
-      self.result.meta['msvc_deps_prefix'] = self.compiler_info.msvc_deps_prefix
-
-  def _translate_compile_200inputs(self, **kwargs):
-    self.result.command += ['%%in', '/Fo%%out']
-
-  def _translate_lib(self, additional_flags=(), **kwargs):
-    self.result.program = 'lib'
-    self.result.command += ['/nologo', '/OUT:%%out', '%%in']
-    self.result.command.extend(additional_flags)
-
-  def _translate_dll(self, additional_flags=(), msvc_link_with=(), **kwargs):
-    self.result.program = 'link'
-    self.result.command += ['/nologo', '/DLL', '/OUT:%%out']
-    if debug:
-      self.result.command += ['/debug']
-    self.result.command += ['%%in']
-    self.result.command.extend(additional_flags)
-    self.result.command.extend(msvc_link_with)
-
-  def cdl(self, fn):
-    return addsuffix(fn, '.cdl' if self['arch'] == 'x86' else '.cdl64')
-
-  def obj(self, fn):
-    return addsuffix(fn, '.obj')
-
-  def bin(self, fn):
-    return addsuffix(fn, '.exe')
-
-  def dll(self, fn):
-    return addsuffix(fn, '.dll')
-
-  def lib(self, fn):
-    return addsuffix(fn, '.lib')
+  return target(command, sources, objects)
 
 
-class ClangCompiler(Translator):
+def _clang_staticlib(output, inputs, additional_flags=(), name=None, **kwargs):
+  target = Target.Builder(name=name)
+  _warn_prefix = target.fullname
+  _warn.unused_kwargs(kwargs)
 
-  def __init__(self, arch, release, debug=False, **kwargs):
-    super().__init__(arch=arch, release=release, debug=debug, **kwargs)
-    self.compiler_info = load_module('compiler.clang').CxxCompiler()
-    self.compiler_info.detect()
+  output = gen_output(output, suffix=platform.lib)
+  command = [lib['program'], 'rcs']
+  command += additional_flags
+  command += ['$out', '$in']
 
-  def _validate(self, arch, release, stdlib=None, **kwargs):
-    assert arch == 'x86_64', arch
-    assert release in range(13, 18)
+  return target(command, expand_inputs(inputs), [output])
 
-    if stdlib is None:
-      stdlib = 'libstdc++' if release <= 15 else 'libc++'
-      self.result.options['stdlib'] = stdlib
-    assert stdlib in ('libstdc++', 'libc++')
 
-  def _validate_compile_050defines(self, arch, release, debug, defines=(),
-      legacy_api=False, **kwargs):
-    self.result.options['defines'] = defines = list(defines)
+def _clang_link(output, inputs, output_type='dll', stdlib=None, debug=False,
+    additional_flags=(), name=None, **kwargs):
+  target = Target.Builder(name=name)
+  _warn_prefix = target.fullname
+  _warn.unused_kwargs(kwargs)
 
-    defines += ['C4D_COCOA', '__MAC']
-    if release >= 15:
-      defines += ['MAXON_API', 'MAXON_TARGET_OSX']
-      defines += ['MAXON_TARGET_DEBUG'] if debug else ['MAXON_TARGET_RELEASE']
-      if arch == 'x86_64':
-        defines += ['MAXON_TARGET_64BIT']
-    else:
-      defines += ['_DEBUG', 'DEBUG'] if defines else ['NDEBUG']
-      if arch == 'x86_64':
-        defines += ['__C4D_64BIT',]
+  if stdlib is None:
+    stdlib = _clang_get_stdlib()
 
-    if legacy_api:
-      defines += ['__LEGACY_API']
+  assert output_type in ('bin', 'dll')
+  output = gen_output(output, suffix=getattr(platform, output_type))
+  command = [ld['program'], '-stdlib=' + stdlib]
+  if debug:
+    command += ['-g']
+  command += ['$in', '-o', '$out']
 
-  def _translate_compile_100base(self, arch, release, debug, stdlib,
-      includes=(), defines=(), additional_flags=(), exceptions=False, **kwargs):
-
-    self.result.program = self.compiler_info.options['program']
-    if release <= 15:
-      self.result.command += (
-        '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
-        '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
-        '-fno-rtti -fpascal-strings '
-        '-Wno-missing-field-initializers -Wno-missing-prototypes '
-        '-Wno-non-virtual-dtor -Woverloaded-virtual -Wno-exit-time-destructors '
-        '-Wmissing-braces -Wparentheses -Wno-switch -Wunused-function '
-        '-Wunused-label -Wno-unused-parameter -Wunused-variable -Wunused-value '
-        '-Wno-empty-body -Wno-uninitialized -Wunknown-pragmas -Wno-shadow '
-        '-Wno-four-char-constants -Wno-conversion -Wno-constant-conversion '
-        '-Wno-int-conversion -Wno-bool-conversion -Wno-enum-conversion '
-        '-Wno-shorten-64-to-32 -Wno-newline-eof -Wno-c++11-extensions '
-        '-fasm-blocks -fstrict-aliasing -Wdeprecated-declarations '
-        '-Wno-invalid-offsetof -mmacosx-version-min=10.6 -msse3 '
-        '-fvisibility=hidden -fvisibility-inlines-hidden -Wno-sign-conversion '
-        '-Wno-logical-op-parentheses -fno-math-errno').split()
-    else:
-      self.result.command += (
-        '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
-        '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
-        '-fno-rtti -fpascal-strings -Wmissing-field-initializers '
-        '-Wmissing-prototypes -Wdocumentation -Wno-non-virtual-dtor '
-        '-Woverloaded-virtual -Wno-exit-time-destructors -Wmissing-braces '
-        '-Wparentheses -Wno-switch -Wunused-function -Wunused-label '
-        '-Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body '
-        '-Wuninitialized -Wunknown-pragmas -Wshadow -Wno-four-char-constants '
-        '-Wno-conversion -Wconstant-conversion -Wint-conversion '
-        '-Wbool-conversion -Wenum-conversion -Wsign-compare -Wshorten-64-to-32 '
-        '-Wno-newline-eof -Wno-c++11-extensions -fasm-blocks -fstrict-aliasing '
-        '-Wdeprecated-declarations -Winvalid-offsetof -mmacosx-version-min=10.7 '
-        '-msse3 -fvisibility=hidden -fvisibility-inlines-hidden '
-        '-Wno-sign-conversion -fno-math-errno').split()
-
-    if not exceptions:
-      self.result.command += ['-fno-exceptions']
-
-    if release <= 15:
-      if debug:
-        self.result.command += ['-include', join(source_dir, 'ge_mac_debug_flags.h')]
-      else:
-        self.result.command += ['-include', join(source_dir, 'ge_mac_flags.h')]
-
-    self.result.command += ['-stdlib={}'.format(stdlib)]
-    self.result.command += ['-g', '-O0'] if debug else ['-O3']
-    self.result.command += ['-D{}'.format(x) for x in autoexpand(defines)]
-    self.result.command += ['-I{}'.format(x) for x in autoexpand(includes)]
-
-  def _translate_compile_110autodeps(self, autodeps=True, depfile=None, **kwargs):
-    if not depfile:
-      depfile = '%%out.d'
-    if autodeps:
-      self.result.command += ['-MMD', '-MF', depfile]
-      self.result.meta['deps'] = 'gcc'
-      self.result.meta['depfile'] = depfile
-
-  def _translate_compile_200inputs(self, **kwargs):
-    self.result.command += ['-c', '%%in', '-o', '%%out']
-
-  def _translate_lib(self, additional_flags=(), **kwargs):
-    self.result.program = 'ar'
-    self.result.command += ['rcs']
-    self.result.command.extend(additional_flags)
-    self.result.command += ['%%out', '%%in']
-
-  def _translate_dll(self, stdlib, additional_flags=(), **kwargs):
-    self.result.program = self.compiler_info.options['program']
-    self.result.command += ['-shared', '-stdlib={}'.format(stdlib)]
-    if debug:
-      self.result.command += ['-g']
-    self.result.command += ['%%in', '-o', '%%out']
-
-  def cdl(self, fn):
-    return addsuffix(fn, '.dylib')
-
-  def obj(self, fn):
-    return addsuffix(fn, '.o')
-
-  def bin(self, fn):
-    return fn
-
-  def dll(self, fn):
-    return addsuffix(fn, '.dylib')
-
-  def lib(self, fn):
-    return addsuffix(addprefix(fn, 'lib'), '.a')
+  return target(command, expand_inputs(inputs), [output])
 
 
 if is_windows:
-  cxx = MsvcCompiler(arch, release, debug, includes=includes)
-elif is_mac:
-  cxx = ClangCompiler(arch, release, debug, includes=includes)
+  objects = _msvc_objects
+  staticlib = _msvc_staticlib
+  link = _msvc_link
+elif is_osx:
+  objects = _clang_objects
+  staticlib = _clang_staticlib
+  link = _clang_link
 else:
   assert False
-
-def objects(sources, src_dir=None, obj_dir='obj', module=None, options=None, **kwargs):
-  module = get_calling_module(module)
-  options = options or {}
-  sources = autoexpand(sources)
-  src_dir = src_dir or commonpath(sources)
-  obj_dir = join(module.identifier, obj_dir)
-  objects = cxx.obj(rmvsuffix(move(sources, src_dir, obj_dir)))
-  result = cxx.translate('_compile', **options)
-  return module.target(
-    inputs=sources,
-    outputs=objects,
-    foreach=True,
-    description = 'Building Object %%out',
-    command=result,
-    meta_type='objects',
-    meta_deps=result.meta.get('deps'),
-    meta_depfile=result.meta.get('depfile'),
-    **kwargs
-  )
-
-
-def static_library(filename, inputs, module=None, includes=(), options=None, **kwargs):
-  module = get_calling_module(module)
-  options = options or {}
-  result = cxx.translate('_lib', **options)
-  filename = normpath(filename, module.identifier)
-  return module.target(
-    inputs=inputs,
-    outputs=cxx.lib(filename),
-    description = 'Building Library %%out',
-    command=result,
-    meta_type='static_library',
-    meta_includes=autoexpand(includes),
-    **kwargs
-  )
-
-
-def plugin(filename, inputs, module=None, options=None, **kwargs):
-  module = get_calling_module(module).locals
-  options = options or {}
-  options['includes'] = includes = list(options.get('includes', []))
-  options['defines'] = includes = list(options.get('defines', []))
-  inputs = list(inputs)
-  if library not in inputs:
-    inputs.append(library)
-  for item in inputs:
-    if isinstance(item, Target):
-      includes.extend(item.meta.get('includes', []))
-      includes.extend(item.meta.get('defines', []))
-  result = cxx.translate('_dll', **options)
-
-  # Add the plugin as order only dependency to the run target.
-  run.order_only_deps.append(cxx.cdl(filename))
-
-  return module.target(
-    inputs=inputs,
-    outputs=cxx.cdl(filename),
-    description = 'Building Plugin %%out',
-    command=result,
-    meta_type='shared_library',
-    meta_deps=result.meta.get('deps'),
-    meta_depfile=result.meta.get('depfile'),
-    **kwargs
-  )
 
 
 object_files = objects(
   sources = sources,
 )
 
-library = static_library(
-  filename = 'c4dsdk',
+library = staticlib(
+  output = 'c4dsdk-r{0}-{1}'.format(release, mode),
   inputs = object_files,
-  includes = includes,
-  default = True,
 )
 
-run = rules.run(
-  executable = [app],
-  additional_flags = debug_args,
-  no_dependency = True,
+run = Target(
+  command = [app] + debug_args,
+  pool = 'console',
 )
 
-if is_mac:
-  lldb = rules.run(
-    executable = ['lldb'],
-    additional_flags = ['--'] + run.commands[0],
-    no_dependency = True,
+if is_osx:
+  lldb = Target(
+    command = ['lldb', '--', app],
+    pool = 'console',
   )

@@ -20,7 +20,7 @@
 # THE SOFTWARE.
 
 from . import python
-from craftr import session, platform, expand_inputs, Target
+from craftr import session, platform, shell, expand_inputs, Target
 from craftr.path import join, normpath, glob
 from craftr.utils import fw_merge
 from craftr.ext.compiler import gen_output, gen_objects, get_platform_toolset
@@ -291,8 +291,9 @@ def _clang_get_stdlib():
 
 
 def _clang_objects(sources, defines=(), include=(), frameworks=(),
-    additional_flags=(), legacy_api=False, exceptions=False, autodeps=True,
-    stdlib=None, name=None, **kwargs):
+    additional_flags=(), remove_flags=(), clang_remove_flags=(),
+    legacy_api=False, exceptions=False, autodeps=True, stdlib=None,
+    name=None, **kwargs):
   target = Target.Builder(name=name, foreach=True)
   _warn_prefix = target.fullname
   _warn.unused_kwargs(kwargs)
@@ -372,6 +373,22 @@ def _clang_objects(sources, defines=(), include=(), frameworks=(),
     target.deps = 'gcc'
     command += ['-MMD', '-MF', '$depfile']
   command += ['-c', '$in', '-o', '$out']
+
+  remove_flags = set(remove_flags)
+  remove_flags |= set(clang_remove_flags)
+  for flag in list(remove_flags):
+    count = 0
+    while True:
+      try:
+        command.remove(flag)
+      except ValueError:
+        break
+      count += 1
+    if count != 0:
+      remove_flags.remove(flag)
+  if remove_flags:
+    fmt = ' '.join(shell.quote(x) for x in remove_flags)
+    _warn.warn("flags not removed: {0}".format(fmt), target.fullname)
 
   return target(command, sources, objects)
 

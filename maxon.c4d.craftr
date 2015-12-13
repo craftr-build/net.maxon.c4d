@@ -291,9 +291,9 @@ def _clang_get_stdlib():
 
 
 def _clang_objects(sources, defines=(), include=(), frameworks=(),
-    additional_flags=(), remove_flags=(), clang_remove_flags=(),
-    legacy_api=False, exceptions=False, autodeps=True, stdlib=None,
-    name=None, **kwargs):
+    additional_flags=(), clang_additional_flags=(), remove_flags=(),
+    clang_remove_flags=(), legacy_api=False, exceptions=False, autodeps=True,
+    stdlib=None, name=None, **kwargs):
   target = Target.Builder(name=name, foreach=True)
   _warn_prefix = target.fullname
   _warn.unused_kwargs(kwargs)
@@ -367,6 +367,8 @@ def _clang_objects(sources, defines=(), include=(), frameworks=(),
   command += ['-g', '-O0'] if debug else ['-O3']
   command += ['-D' + x for x in defines]
   command += ['-I' + x for x in include]
+  command += additional_flags
+  command += clang_additional_flags
 
   if autodeps:
     target.depfile = '$out.d'

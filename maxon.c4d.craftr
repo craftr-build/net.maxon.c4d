@@ -24,9 +24,9 @@ from craftr import session, platform, shell, expand_inputs, Target
 from craftr.path import join, normpath, glob
 from craftr.utils import fw_merge
 from craftr.ext.compiler import gen_output, gen_objects, get_platform_toolset
+from os import environ
 import craftr.path as _path
 import craftr.warn as _warn
-import os
 import re
 
 
@@ -36,10 +36,9 @@ is_osx = (platform.name == 'Darwin')
 if not is_windows and not is_osx:
   raise EnvironmentError('unsupported platform "{0}"'.format(platform.name))
 
-env = session.env
-path = env.get('maxon.c4d.path', None)
-release = int(env.get('maxon.c4d.release', 0))
-debug = env.get_first('maxon.c4d.debug', 'debug', default=False)
+path = environ.get('maxon.c4d.path', None)
+release = int(environ.get('maxon.c4d.release', 0))
+debug = environ.get('maxon.c4d.debug', environ.get('debug', False))
 mode = 'debug' if debug else 'release'
 
 # =====================================================================

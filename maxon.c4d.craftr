@@ -20,10 +20,11 @@
 # THE SOFTWARE.
 
 from . import python
-from craftr import session, platform, shell, expand_inputs, Target
+from craftr import session, shell, expand_inputs, Target
 from craftr.path import join, normpath, glob
 from craftr.utils import fw_merge
-from craftr.ext.compiler import gen_output, gen_objects, get_platform_toolset
+from craftr.ext import platform
+from craftr.ext.compiler import gen_output, gen_objects
 from os import environ
 import craftr.path as _path
 import craftr.warn as _warn
@@ -64,10 +65,10 @@ if not release:
     release = 16
   del match
 
-tools = get_platform_toolset()
-cxx = tools.CxxCompiler(detect=True)
-ld = tools.Linker()
-lib = tools.Archiver()
+
+cxx = platform.cxx
+ld = platform.ld
+lib = platform.ar
 
 if is_windows:
   arch = cxx.arch

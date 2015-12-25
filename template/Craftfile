@@ -1,5 +1,5 @@
-# -*- mode: python -*-
-# craftr_module(plugin)
+# -*- mode: python; -*-
+# craftr_module(<module_ident>)
 #
 # Copyright (C) <Year> <Name>
 # All rights reserved.

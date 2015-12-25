@@ -1,0 +1,5 @@
+# -*- mode: python; -*-
+
+session.path.append(path.local('..'))
+session.update()
+

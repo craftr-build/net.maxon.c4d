@@ -4,7 +4,6 @@
 # Copyright (C) <Year> <Name>
 # All rights reserved.
 
-from craftr import session, path
 from craftr.ext.maxon import c4d
 
 objects = c4d.objects(

@@ -20,13 +20,12 @@
 # THE SOFTWARE.
 
 from . import python
-from craftr import session, shell, expand_inputs, Target
+from craftr import shell, expand_inputs, Target
 from craftr.path import join, normpath, glob
 from craftr.utils import fw_merge
 from craftr.ext import platform
 from craftr.ext.compiler import gen_output, gen_objects
 from os import environ
-import craftr.path as _path
 import craftr.warn as _warn
 import re
 
@@ -37,7 +36,7 @@ is_osx = (platform.name == 'Darwin')
 if not is_windows and not is_osx:
   raise EnvironmentError('unsupported platform "{0}"'.format(platform.name))
 
-path = environ.get('maxon.c4d.path', None)
+c4d_path = environ.get('maxon.c4d.path', None)
 release = int(environ.get('maxon.c4d.release', 0))
 debug = environ.get('maxon.c4d.debug', environ.get('debug', False))
 mode = 'debug' if debug else 'release'
@@ -46,23 +45,17 @@ mode = 'debug' if debug else 'release'
 #   Evaluate pre-conditions and detect Cinema 4D path and release
 # =====================================================================
 
-if not path:
+if not c4d_path:
   # We assume that the project folder is inside the Cinema 4D
   # plugins directory.
-  path = normpath(join(__file__, '../../..'))
+  c4d_path = normpath(join(__file__, '../../..'))
 
 if not release:
   # Try to deduce the release number from the installation path.
-  match = re.search('Cinema\s+4D\s+R(\d+)', path, re.I)
-  if match:
-    release = int(match.group(1))
-  elif _path.isfile(join(path, 'CINEMA 4D 64 Bit.exe')):
-    # If that didn't work, pre-R16 versions had the Windows executable
-    # named like this, and it was also distributed with the Mac version.
-    release = 15
-  else:
-    # We'll assume that we're working with the R16+ API.
-    release = 16
+  match = re.search('Cinema\s+4D\s+R(\d+)', c4d_path, re.I)
+  if not match:
+    error('could not determine C4D release number, please specify maxon.c4d.release')
+  release = int(match.group(1))
   del match
 
 
@@ -75,14 +68,14 @@ if is_windows:
 else:
   arch = 'x86_64'
 
-print('[maxon.c4d] SDK Version: R{}, Target: {}, Compiler: {} v{}'.format(
+info('SDK Version: R{}, Target: {}, Compiler: {} v{}'.format(
   release, arch, cxx.name, getattr(cxx, 'version', None)))
 
-resource_dir = join(path, 'resource')
+resource_dir = join(c4d_path, 'resource')
 if release <= 15:
   source_dir = join(resource_dir, '_api')
 else:
-  source_dir = normpath(path + '/frameworks/cinema.framework/source')
+  source_dir = normpath(c4d_path + '/frameworks/cinema.framework/source')
 
 # =====================================================================
 #   Generate source and object file lists and include directories
@@ -104,8 +97,8 @@ includes = [
   resource_dir + '/res/description']
 if release <= 15:
   includes += glob(resource_dir + '/modules/*/res/description')
-  includes += glob(path + '/modules/*/res/description')
-  includes += glob(path + '/modules/*/*/res/description')
+  includes += glob(c4d_path + '/modules/*/res/description')
+  includes += glob(c4d_path + '/modules/*/*/res/description')
 else:
   includes += glob(resource_dir + '/modules/*/description')
 includes = normpath(includes)
@@ -149,15 +142,15 @@ if python_ver:
 if is_windows:
   if arch == 'x64':
     if release < 16:
-      app = join(path, 'CINEMA 4D 64 Bit.exe')
+      app = join(c4d_path, 'CINEMA 4D 64 Bit.exe')
     else:
-      app = join(path, 'CINEMA 4D.exe')
+      app = join(c4d_path, 'CINEMA 4D.exe')
   elif arch == 'x86':
-    app = join(path, 'CINEMA 4D.exe')
+    app = join(c4d_path, 'CINEMA 4D.exe')
   else:
     assert False
 elif is_osx:
-  app = join(path, 'CINEMA 4D.app/Contents/MacOS/CINEMA 4D')
+  app = join(c4d_path, 'CINEMA 4D.app/Contents/MacOS/CINEMA 4D')
 else:
   assert False
 
@@ -259,7 +252,7 @@ def _msvc_link(output, inputs, output_type='dll', additional_flags=(),
   if output_type not in ('bin', 'dll'):
     raise ValueError('invalid output_type: {0!r}'.format(output_type))
   if output_type == 'dll':
-    suffix = lambda x: _path.addsuffix(x, '.cdl64' if arch == 'x64' else '.cdl')
+    suffix = lambda x: path.addsuffix(x, '.cdl64' if arch == 'x64' else '.cdl')
   else:
     suffix = getattr(platform, output_type)
 
@@ -277,7 +270,7 @@ def _msvc_link(output, inputs, output_type='dll', additional_flags=(),
     command += ['/DLL']
   if debug:
     command += ['/debug']
-  command += _path.addsuffix(libs, '.lib')
+  command += path.addsuffix(libs, '.lib')
   command += external_libs
   command += ['/LIBPATH:' + x for x in libpath]
   command += additional_flags

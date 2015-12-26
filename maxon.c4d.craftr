@@ -20,9 +20,8 @@
 # THE SOFTWARE.
 
 from . import python
-from craftr import shell, expand_inputs, Target
+from craftr import shell, expand_inputs, Target, Framework
 from craftr.path import join, normpath, glob
-from craftr.utils import fw_merge
 from craftr.ext import platform
 from craftr.ext.compiler import gen_output, gen_objects
 from os import environ
@@ -103,6 +102,11 @@ else:
   includes += glob(resource_dir + '/modules/*/description')
 includes = normpath(includes)
 
+c4d_framework = Framework('maxon.c4d.',
+  include = includes,
+  external_libs = [],
+)
+
 # =====================================================================
 #   Embedded Python support
 # =====================================================================
@@ -160,21 +164,27 @@ debug_args = ['-debug', '-g_alloc=debug', '-g_console=true']
 #   Compiler settings
 # =====================================================================
 
-def _msvc_objects(sources, defines=(), include=(), frameworks=(),
-    additional_flags=(), msvc_runtime_library=None, legacy_api=False,
-    exceptions=False, autodeps=True, name=None, **kwargs):
-  target = Target.Builder(name=name, foreach=True)
+def _msvc_objects(sources, frameworks=(), target_name=None, **kwargs):
+  target = Target.Builder(name=target_name, foreach=True)
   _warn_prefix = target.fullname
   _warn.unused_kwargs(kwargs)
+
+  fwargs = Framework('_msvc_objects', **kwargs)
+  settings = Framework.Join(c4d_framework, *frameworks)
+
+  defines = settings.get_merge('defines')
+  include = settings.get_merge('include')
+  additional_flags = settings.get_merge('additional_flags')
+  additional_flags += settings.get_merge('msvc_additional_flags')
+  msvc_runtime_library = settings.get('msvc_runtime_library', None)
+  legacy_api = settings.get('legacy_api', False)
+  exceptions = settings.get('exceptions', False)
+  autodeps = settings.get('autodeps', True)
 
   assert arch in ('x64', 'x86')
   assert release in range(13, 18)
 
-  sources = expand_inputs(sources)
   objects = gen_objects(sources, suffix=platform.obj)
-
-  defines = fw_merge(frameworks, 'defines', defines)
-  include = fw_merge(frameworks, 'include', include) + globals()['includes']
 
   defines += ['__PC']
   if release >= 15:
@@ -242,12 +252,29 @@ def _msvc_staticlib(output, inputs, additional_flags=(), name=None, **kwargs):
   return target(command, inputs, [output])
 
 
-def _msvc_link(output, inputs, output_type='dll', additional_flags=(),
-    libs=(), external_libs=(), libpath=(), msvc_libs=(), frameworks=(),
-    name=None, **kwargs):
+def _msvc_link(output, inputs, frameworks=(), target_name=None, **kwargs):
   target = Target.Builder(name=name)
   _warn_prefix = target.fullname
   _warn.unused_kwargs(kwargs)
+
+  fwargs = Framework('_msvc_link', **kwargs)
+  settings = Framework.Join(c4d_framework, *frameworks)
+  inputs = expand_inputs(inputs, settings)
+
+  external_libs = settings.get_merge('external_libs')
+  external_libs = expand_inputs(external_libs, settings)
+
+  output_type = settings.get('output_type', 'dll')
+  additional_flags = settings.get_merge('additional_flags')
+  additional_flags += settings.get_merge('msvc_additional_flags')
+  libs = settings.get_merge('libs')
+  libs += settings.get_merge('msvc_libs')
+  libs += settings.get_merge('win_libs')
+  if arch == 'x86':
+    libs += settings.get_merge('win32_libs')
+  else:
+    libs += settings.get_merge('win64_libs')
+  libpath = settings.get_merge('libpath')
 
   if output_type not in ('bin', 'dll'):
     raise ValueError('invalid output_type: {0!r}'.format(output_type))
@@ -256,14 +283,6 @@ def _msvc_link(output, inputs, output_type='dll', additional_flags=(),
   else:
     suffix = getattr(platform, output_type)
 
-  libs = fw_merge(frameworks, 'libs', libs)
-  libs += fw_merge(frameworks, 'msvc_libs', msvc_libs)
-  libpath = fw_merge(frameworks, 'libpath', libpath)
-  external_libs = fw_merge(frameworks, 'external_libs', external_libs)
-  external_libs += globals()['library'].outputs
-
-  external_libs = expand_inputs(external_libs)
-  inputs = expand_inputs(inputs)
   output = gen_output(output, suffix=suffix)
   command = [ld['program'], '/nologo', '/OUT:$out']
   if output_type == 'dll':
@@ -283,13 +302,24 @@ def _clang_get_stdlib():
   return 'libstc++' if release <= 15 else 'libc++'
 
 
-def _clang_objects(sources, defines=(), include=(), frameworks=(),
-    additional_flags=(), clang_additional_flags=(), remove_flags=(),
-    clang_remove_flags=(), legacy_api=False, exceptions=False, autodeps=True,
-    stdlib=None, name=None, **kwargs):
-  target = Target.Builder(name=name, foreach=True)
+def _clang_objects(sources, frameworks=(), target_name=None, **kwargs):
+  target = Target.Builder(name=target_name, foreach=True)
   _warn_prefix = target.fullname
   _warn.unused_kwargs(kwargs)
+
+  fwargs = Framework('_clang_objects', **kwargs)
+  settings = Framework.Join(fwargs, c4d_framework, *frameworks)
+
+  defines = settings.get_merge('defines')
+  include = settings.get_merge('include')
+  additional_flags = settings.get_merge('additional_flags')
+  additional_flags += settings.get_merge('clang_additional_flags')
+  remove_flags = settings.get_merge('remove_flags')
+  remove_flags += settings.get_merge('clang_remove_flags')
+  legacy_api = settings.get('legacy_api', False)
+  exceptions = settings.get('exceptions', False)
+  autodeps = settings.get('autodeps', True)
+  stdlib = settings.get('stdlib', _clang_get_stdlib())
 
   assert arch == 'x86_64'
   assert release in range(13, 18)
@@ -297,9 +327,6 @@ def _clang_objects(sources, defines=(), include=(), frameworks=(),
   objects = gen_objects(sources, suffix=platform.obj)
   if stdlib is None:
     stdlib = _clang_get_stdlib()
-
-  defines = fw_merge(frameworks, 'defines', defines)
-  include = fw_merge(frameworks, 'include', include) + globals()['includes']
 
   defines += ['C4D_COCOA', '__MAC']
   if release >= 15:
@@ -385,36 +412,50 @@ def _clang_objects(sources, defines=(), include=(), frameworks=(),
     fmt = ' '.join(shell.quote(x) for x in remove_flags)
     _warn.warn("flags not removed: {0}".format(fmt), target.fullname)
 
-  return target(command, sources, objects)
+  fw = Framework(target.name, libs=['c++'])
+  return target(command, sources, objects, frameworks=[fw])
 
 
-def _clang_staticlib(output, inputs, additional_flags=(), name=None, **kwargs):
-  target = Target.Builder(name=name)
+def _clang_staticlib(output, inputs, target_name=None, **kwargs):
+  target = Target.Builder(name=target_name)
   _warn_prefix = target.fullname
   _warn.unused_kwargs(kwargs)
+
+  fwargs = Framework('_clang_staticlib', **kwargs)
+  settings = Framework.Join(fwargs, c4d_framework, *frameworks)
+  inputs = expand_inputs(inputs, settings)
+
+  additional_flags = settings.get_merge('additional_flags')
 
   output = gen_output(output, suffix=platform.lib)
   command = [lib['program'], 'rcs']
   command += additional_flags
   command += ['$out', '$in']
 
-  return target(command, expand_inputs(inputs), [output])
+  return target(command, inputs, [output])
 
 
-def _clang_link(output, inputs, output_type='dll', stdlib=None, debug=False,
-    libs=(), external_libs=(), additional_flags=(), frameworks=(), name=None,
-    **kwargs):
+def _clang_link(output, inputs, frameworks=(), target_name=None, **kwargs):
   target = Target.Builder(name=name)
   _warn_prefix = target.fullname
   _warn.unused_kwargs(kwargs)
 
-  if stdlib is None:
-    stdlib = _clang_get_stdlib()
+  fwargs = Framework('_clang_link', **kwargs)
+  settings = Framework.Join(fwargs, c4d_framework, *frameworks)
+  inputs = expand_inputs(inputs, settings)
 
-  libs = fw_merge(frameworks, 'libs', libs)
-  libs.append('c++')
-  external_libs = fw_merge(frameworks, 'external_libs', external_libs)
-  external_libs += globals()['library'].outputs
+  """output_type='dll', stdlib=None, debug=False,
+    libs=(), external_libs=(), additional_flags=(), frameworks=(),
+    """
+
+  output_type = settings.get('output_type', 'dll')
+  stdlib = settings.get('stdlib', _clang_get_stdlib())
+  debug = settings.get('debug', False)
+  libs = settings.get_merge('libs')
+  libs += settings.get_merge('clang_libs')
+  libs += settings.get_merge('osx_libs')
+  external_libs += settings.get_merge('external_libs')
+  additional_flags = settings.get_merge('additional_flags')
 
   assert output_type in ('bin', 'dll')
   output = gen_output(output, suffix=getattr(platform, output_type))
@@ -426,7 +467,7 @@ def _clang_link(output, inputs, output_type='dll', stdlib=None, debug=False,
   command += additional_flags
   command += ['$in', '-o', '$out']
 
-  return target(command, expand_inputs(inputs), [output], implicit_deps=external_libs)
+  return target(command, inputs, [output], implicit_deps=external_libs)
 
 
 if is_windows:
@@ -449,6 +490,7 @@ library = staticlib(
   output = 'c4dsdk-r{0}-{1}'.format(release, mode),
   inputs = object_files,
 )
+c4d_framework['external_libs'] += library.outputs
 
 run = Target(
   command = [app] + debug_args,

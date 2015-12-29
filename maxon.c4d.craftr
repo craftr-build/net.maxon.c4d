@@ -28,8 +28,8 @@ import re
 
 from . import python
 
-is_windows = (platform.name == 'Windows')
-is_osx = (platform.name == 'Darwin')
+is_windows = (platform.name == 'win')
+is_osx = (platform.name == 'mac')
 
 if not is_windows and not is_osx:
   raise EnvironmentError('unsupported platform "{0}"'.format(platform.name))
@@ -61,13 +61,10 @@ cxx = platform.cxx
 ld = platform.ld
 lib = platform.ar
 
-if is_windows:
-  arch = cxx.arch
-else:
-  arch = 'x86_64'
+arch = cxx.desc.get('target')
 
-info('SDK Version: R{}, Target: {}, Compiler: {} v{}'.format(
-  release, arch, cxx.name, getattr(cxx, 'version', None)))
+info(cxx.desc.get('version_str'))
+info('Cinema 4D R{0} for {1}'.format(release, arch))
 
 resource_dir = join(c4d_path, 'resource')
 if release <= 15:

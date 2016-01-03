@@ -236,7 +236,12 @@ def _msvc_staticlib(output, inputs, frameworks=(), target_name=None, **kwargs):
   builder = TargetBuilder(inputs, frameworks, kwargs, name=target_name)
   output = gen_output(output, suffix=platform.lib)
 
-  command = [lib['program'], '/nologo', '/OUT:$out', '$in']
+  # Write the names of the input files to a file to avoid too
+  # long command lines.
+  cmdfile = builder.write_command_file(builder.inputs, '.in')
+
+  # Generate the command.
+  command = [lib['program'], '/nologo', '/OUT:$out', '@' + cmdfile]
   command += builder.merge('additional_flags')
   return builder.create_target(command, outputs=[output])
 
@@ -266,6 +271,8 @@ def _msvc_link(output, inputs, frameworks=(), target_name=None, **kwargs):
   else:
     suffix = getattr(platform, output_type)
 
+  infile = builder.write_command_file(builder.inputs, '.in')
+
   output = gen_output(output, suffix=suffix)
   command = [ld['program'], '/nologo', '/OUT:$out']
   if output_type == 'dll':
@@ -276,7 +283,7 @@ def _msvc_link(output, inputs, frameworks=(), target_name=None, **kwargs):
   command += external_libs
   command += ['/LIBPATH:' + x for x in libpath]
   command += additional_flags
-  command += ['$in']
+  command += ['@' + infile]
 
   return builder.create_target(command, outputs=[output], implicit_deps=external_libs)
 

@@ -4,6 +4,7 @@
 # Copyright (C) <Year> <Name>
 # All rights reserved.
 
+from craftr import *
 from craftr.ext.maxon import c4d
 
 objects = c4d.objects(
@@ -12,6 +13,6 @@ objects = c4d.objects(
 )
 
 plugin = c4d.link(
-  output = path.local('plugin/{}'.format(__ident__)),
+  output = path.local('plugin/{}'.format(project_name)),
   inputs = objects,
 )

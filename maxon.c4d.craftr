@@ -161,7 +161,7 @@ debug_args = ['-debug', '-g_alloc=debug', '-g_console=true']
 # =====================================================================
 
 def _msvc_objects(sources, frameworks=(), target_name=None, **kwargs):
-  assert arch in ('x64', 'x86')
+  assert arch in ('x64', 'x86'), arch
   assert release in range(13, 18)
 
   builder = TargetBuilder(sources, frameworks, kwargs, name=target_name)
@@ -293,7 +293,7 @@ def _clang_get_stdlib():
 
 
 def _clang_objects(sources, frameworks=(), target_name=None, **kwargs):
-  assert arch == 'x86_64'
+  assert arch.startswith('x86_64'), arch
   assert release in range(13, 18)
   builder = TargetBuilder(sources, frameworks, kwargs, name=target_name)
   builder.add_framework(c4d_framework)
@@ -417,7 +417,7 @@ def _clang_link(output, inputs, frameworks=(), target_name=None, **kwargs):
   libs = builder.merge('libs')
   libs += builder.merge('clang_libs')
   libs += builder.merge('osx_libs')
-  external_libs += builder.merge('external_libs')
+  external_libs = builder.merge('external_libs')
   additional_flags = builder.merge('additional_flags')
 
   assert output_type in ('bin', 'dll')

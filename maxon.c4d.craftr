@@ -289,7 +289,7 @@ def _msvc_link(output, inputs, frameworks=(), target_name=None, **kwargs):
 
 
 def _clang_get_stdlib():
-  return 'libstc++' if release <= 15 else 'libc++'
+  return 'libstdc++' if release <= 15 else 'libc++'
 
 
 def _clang_objects(sources, frameworks=(), target_name=None, **kwargs):

@@ -20,6 +20,8 @@
 # THE SOFTWARE.
 
 from craftr import *
+craftr_min_version('0.20.0')
+
 from craftr.path import join, normpath, glob
 from craftr.ext import platform
 from craftr.ext.compiler import gen_output, gen_objects

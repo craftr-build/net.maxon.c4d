@@ -395,7 +395,7 @@ def _clang_objects(sources, frameworks=(), target_name=None, **kwargs):
       remove_flags.remove(flag)
   if remove_flags:
     fmt = ' '.join(shell.quote(x) for x in remove_flags)
-    builder.warn("flags not removed: {0}".format(fmt))
+    builder.log('warn', "flags not removed: {0}".format(fmt))
 
   builder.add_framework(builder.name, libs=['c++'])
   return builder.create_target(command, outputs=objects, foreach=True)

@@ -287,6 +287,7 @@ def _msvc_link(output, inputs, frameworks=(), target_name=None, **kwargs):
   command += additional_flags
   command += ['@' + infile]
 
+  _update_deps(output)
   return builder.create_target(command, outputs=[output], implicit_deps=external_libs)
 
 
@@ -432,6 +433,7 @@ def _clang_link(output, inputs, frameworks=(), target_name=None, **kwargs):
   command += additional_flags
   command += ['$in', '-o', '$out']
 
+  _update_deps(output)
   return builder.create_target(command, outputs=[output], implicit_deps=external_libs)
 
 
@@ -470,3 +472,10 @@ if is_osx:
     command = ['lldb', '--', app],
     pool = 'console',
   )
+
+
+
+def _update_deps(path):
+  run.order_only_deps.append(path)
+  if 'lldb' in globals():
+    run.order_only_deps.append(path)

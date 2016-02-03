@@ -462,6 +462,9 @@ run = Target(
   pool = 'console',
 )
 
+if is_windows:
+  run.command = ['cmd', '/c', 'start', shell.safe('"parentconsole"')] + run.command
+
 if is_osx:
   lldb = Target(
     command = ['lldb', '--', app],

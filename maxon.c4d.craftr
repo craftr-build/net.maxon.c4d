@@ -200,7 +200,7 @@ def _msvc_objects(sources, frameworks=(), target_name=None, **kwargs):
     '/wd4355 /wd4365 /wd4389 /wd4505 /wd4512 /wd4611 /wd4706 /wd4718 '
     '/wd4740 /wd4748 /wd4996 /FC /errorReport:prompt /vmg /vms /w44263 '
     '/we4264').split()
-  if cxx.version >= 'v18':
+  if cxx.version >= '18':
     # required for parallel writes to .pdb files.
     command += ['/FS']
 

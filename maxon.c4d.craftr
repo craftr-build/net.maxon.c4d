@@ -462,6 +462,7 @@ c4d_framework['external_libs'] += library.outputs
 run = Target(
   command = [app] + debug_args,
   pool = 'console',
+  explicit = True,
 )
 
 if is_windows:
@@ -471,6 +472,7 @@ if is_osx:
   lldb = Target(
     command = ['lldb', '--', app],
     pool = 'console',
+    explicit = True,
   )
 
 

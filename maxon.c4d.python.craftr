@@ -42,16 +42,13 @@ format them as a Python file, a class or in JSON format.
 
 ```python
 # craftr_module(my_plugin)
-from craftr.utils.path import *
-
-session.path.append(join(project_dir, '..'))
-python = load_module('maxon.c4d.python')
+from craftr import *
+from craftr.ext.maxon.c4d.python import export_res_symbols
 
 def symbols():
-  python.symbols_format(project_dir, None, format='class')
+  export_res_symbols(project_dir, None, format='class')
   # or
-  symbols_file = join(project_dir', 'devel', 'res.py')
-  python.symbols_format(project_dir, symbols_file, format='file')
+  export_res_symbols(project_dir, path.local('devel/res.py'), fmt='file')
 ```
 
 This will format the symbols as a Python class and output it to stdout
@@ -89,29 +86,25 @@ archived to the `res/modules2.6` and `res/modules2.7` directories.
 This script does exactly that.
 
 ```python
-from craftr.utils.path import *
-session.path.append(join(project_dir, '..'))
-python = load_module('maxon.c4d.python')
+# craftr_module(my_plugin)
+from craftr import *
+from craftr.ext.maxon.c4d.python import C4DDistro, Egg
 
+class bdist(C4DDistro):
+  source_dir = path.local('devel')
+  res_dir = path.local('res')
 
-class PythonDistro(python.C4DDistro):
-  # The base directory that contains the sources.
-  source_dir = join(project_dir, 'devel')
-
-  # The directory in which the compiled modules should be saved to.
-  res_dir = join(project_dir, 'res')
-
-  # The versions to compile for. Defaults to exactly this value.
+  # The versions to compile for. Defaults to exactly these values,
+  # so you can usually omitt it.
   versions = ['2.6', '2.7']
 
   # A list of directory names that are to be compiled using setuptools.
   setuptools_packages = ['some_package']
 
-  # A list of packages that should be compiled and archived manually
-  # without a setup.py script. The first item in the sub-list is the
-  # output filename of the egg.
-  manual_packages = [
-    ['my_tools-{py}.egg', 'res.py', 'my_plugin_tools'],
+  # A list of eggs that should be created manually. You can specify
+  # the "zipped" parameter to specify the egg should be zipped or not.
+  eggs = [
+    Egg('lib.egg', ['nr.cli/nr', 'nr.strex/nr', 'res.py'], zipped=False),
   ]
 ```
 
@@ -140,7 +133,9 @@ import json
 import os
 import pipes
 import py_compile
+import random
 import re
+import shutil
 import subprocess
 import sys
 import zipfile
@@ -219,7 +214,7 @@ def get_resource_files(plugin_dir):
   return results
 
 
-def symbols_format(plugin_dir, outfile, fmt):
+def export_res_symbols(plugin_dir, outfile, fmt):
   ''' Parses the symbols of the specified *plugin_dir* and formats
   it based on the specified *format*. If *outfile* is specified, it
   will be written into that file, otherwise it will be output to
@@ -496,7 +491,8 @@ class C4DDistro(object):
   # res_dir
   versions = ['2.6', '2.7']
   setuptools_packages = []
-  manual_packages = []
+  manual_packages = []  # Deprecated, use `eggs` instead
+  eggs = []
   do_purge = True
 
   def __init__(self):
@@ -520,6 +516,52 @@ class C4DDistro(object):
         self.results.append(outfile)
         if self.do_purge:
           purge(files)
+      for egg in self.eggs:
+        if not egg.base_dir:
+          egg.base_dir = self.source_dir
+        egg.build(pybin, version, outdir)
+        if self.do_purge:
+          purge(egg.files)
+
+
+class Egg(object):
+  ''' This class is used to describe the build information for a
+  Python egg. Note that eggs can also be created without putting
+  them into a Zipfile. '''
+
+  def __init__(self, name, files, base_dir=None, zipped=True):
+    self.name = name
+    self.files = files
+    self.zipped = zipped
+    self.base_dir = base_dir
+
+  def build(self, pybin, pyversion, dest_dir):
+    outfile = self.name
+    if not os.path.isabs(outfile):
+      outfile = os.path.join(dest_dir, outfile)
+    outfile = outfile.format(py='py' + pyversion)
+
+    if os.path.isfile(outfile):
+      os.remove(outfile)
+    elif os.path.isdir(outfile):
+      shutil.rmtree(outfile)
+
+    files = []
+    for file in self.files:
+      if not os.path.isabs(file) and self.base_dir:
+        file = os.path.join(self.base_dir, file)
+      files.append(file)
+
+    create_egg(pybin, files, outfile)
+    if not self.zipped:
+      dirname = os.path.dirname(outfile)
+      tempdir = os.path.join(dirname, '.temp_egg_' + str(random.randint(0, 999)))
+      with zipfile.ZipFile(outfile) as fp:
+        fp.extractall(tempdir)
+      os.remove(outfile)
+      os.rename(tempdir, outfile)
+
+    return outfile
 
 
 # =====================================================================

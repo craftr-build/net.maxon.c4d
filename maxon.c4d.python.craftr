@@ -293,10 +293,9 @@ def symbols_format_class(symbols, desc_symbols, fp):
 def symbols_preformat(symbols, desc_symbols):
   def preprocess(symbols):
     if not symbols: return
-    maxlen = max(len(sym) for sym in symbols)
     for name, value in sorted(symbols.items(), key=lambda x: (x[1], x[0])):
       if not name.startswith('_'):
-        yield name.ljust(maxlen) + ' = ' + str(value)
+        yield name + ' = ' + str(value)
   formatted = []
   formatted.extend(preprocess(symbols))
   formatted.extend('')

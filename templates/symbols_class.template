@@ -1,5 +1,5 @@
 exec ("""class res(object):
- # Automatically generated using craftr-c4d
+ # Automatically generated using the Craftr maxon.c4d module
  project_path = os.path.dirname(__file__)
  def string(self, name, *subst):
   result = __res__.LoadString(getattr(self, name))

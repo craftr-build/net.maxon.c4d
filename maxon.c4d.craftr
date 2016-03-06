@@ -137,6 +137,11 @@ if python_ver:
   else:
     assert False
 
+pylib = Framework(
+  include = [python_include, path.local('include')],
+  libpath = [python_lib_path],
+)
+
 # =====================================================================
 #   Determine application path
 # =====================================================================

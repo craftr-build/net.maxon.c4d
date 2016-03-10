@@ -191,7 +191,7 @@ def _msvc_objects(sources, frameworks=(), target_name=None, **kwargs):
     if arch == 'x64':
       defines += ['MAXON_TARGET_64BIT']
   else:
-    defines += ['_DEBUG', 'DEBUG'] if defines else ['NDEBUG']
+    defines += ['_DEBUG', 'DEBUG'] if debug else ['NDEBUG']
     if arch == 'x64':
       defines += ['__C4D_64BIT', 'WIN64', '_WIN64']
     else:

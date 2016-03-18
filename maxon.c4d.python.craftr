@@ -343,6 +343,13 @@ def render_template(__template_string, **context):
 #  Py-Compile Stuff
 # =====================================================================
 
+def getsuffix(filename):
+  index = filename.rfind('.')
+  if index > filename.replace('\\', '/').rfind('/'):
+    return filename[index:]
+  return ''
+
+
 def shell_quote(s):
   if os.name == 'nt' and os.sep == '\\':
     s = s.replace('"', '\\"')
@@ -454,6 +461,22 @@ def create_egg(pybin, source, dest, exclude_source=True):
     if not os.path.exists(filename):
       raise IOError('does not exist: {}').format(filename)
     egg.writepy(filename)
+    if not os.path.isdir(filename):
+      continue
+
+    parent_dir = os.path.dirname(filename)
+
+    # PyZipFile.writepy() already works recursively, but it only
+    # takes Python files into consideration. The module directory
+    # may contain additional data files which we want to include.
+    for root, dirs, files in os.walk(filename):
+      arcroot = os.path.relpath(root, parent_dir)
+      for fn in files:
+        if getsuffix(fn) not in ('.py', '.pyc', '.pyo'):
+          arcname = os.path.join(arcroot, fn)
+          print("     [+]", arcname)
+          egg.write(os.path.join(root, fn), arcname)
+
   return 0
 
 

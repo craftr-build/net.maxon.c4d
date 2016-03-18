@@ -188,6 +188,7 @@ def _msvc_objects(sources, frameworks=(), target_name=None, **kwargs):
   legacy_api = builder.get('legacy_api', False)
   exceptions = builder.get('exceptions', False)
   autodeps = builder.get('autodeps', True)
+  forced_include = builder.merge('forced_include')
 
   defines += ['__PC']
   if release >= 15:
@@ -238,6 +239,7 @@ def _msvc_objects(sources, frameworks=(), target_name=None, **kwargs):
 
   command += ['/D' + x for x in defines]
   command += ['/I' + x for x in include]
+  command += ['/FI' + x for x in forced_include]
   command += additional_flags
   command += ['$in', '/Fo$out']
 
@@ -322,6 +324,7 @@ def _clang_objects(sources, frameworks=(), target_name=None, **kwargs):
   exceptions = builder.get('exceptions', False)
   autodeps = builder.get('autodeps', True)
   stdlib = builder.get('stdlib', _clang_get_stdlib())
+  forced_include = builder.merge('forced_include')
 
   defines += ['C4D_COCOA', '__MAC']
   if release >= 15:
@@ -382,6 +385,7 @@ def _clang_objects(sources, frameworks=(), target_name=None, **kwargs):
   command += ['-g', '-O0'] if debug else ['-O3']
   command += ['-D' + x for x in defines]
   command += ['-I' + x for x in include]
+  command += [utils.flatten('-include', x) for x in forced_include]
   command += additional_flags
 
   if autodeps:

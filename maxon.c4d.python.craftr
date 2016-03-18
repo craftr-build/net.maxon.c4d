@@ -451,6 +451,8 @@ def create_egg(pybin, source, dest, exclude_source=True):
       purge(filename)
 
     print("  [+]", filename)
+    if not os.path.exists(filename):
+      raise IOError('does not exist: {}').format(filename)
     egg.writepy(filename)
   return 0
 

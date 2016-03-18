@@ -385,7 +385,7 @@ def _clang_objects(sources, frameworks=(), target_name=None, **kwargs):
   command += ['-g', '-O0'] if debug else ['-O3']
   command += ['-D' + x for x in defines]
   command += ['-I' + x for x in include]
-  command += [utils.flatten('-include', x) for x in forced_include]
+  command += utils.flatten(('-include', x) for x in forced_include)
   command += additional_flags
 
   if autodeps:

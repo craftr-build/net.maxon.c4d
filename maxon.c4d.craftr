@@ -130,7 +130,7 @@ if python_ver:
     python_include = join(python_fw, 'include')
 
     pylib = Framework(
-      include = [python_include, path.local('include')],
+      include = [python_include, path.local('fix/python_api')],
       libpath = [python_lib_path],
     )
   elif is_osx:
@@ -141,7 +141,7 @@ if python_ver:
     python_include = join(python_fw, 'include', 'python' + python_ver)
 
     pylib = Framework(
-      include = [python_include, path.local('include')],
+      include = [python_include, path.local('fix/python_api')],
       external_libs = [python_lib_full],
     )
   else:

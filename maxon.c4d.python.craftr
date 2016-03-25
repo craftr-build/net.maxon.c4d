@@ -306,10 +306,10 @@ def symbols_preformat(symbols, desc_symbols):
 
 
 def load_template(name):
-  ''' Loads the contents of a template from the `templates` directory. '''
+  ''' Loads the contents of a template from the `resource` directory. '''
 
   dirname = os.path.dirname(__file__)
-  filename = os.path.join(dirname, 'templates', name + '.template')
+  filename = os.path.join(dirname, 'resource', name + '.template')
   with open(filename, 'r') as fp:
     return fp.read()
 

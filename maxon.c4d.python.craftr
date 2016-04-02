@@ -239,12 +239,12 @@ def export_res_symbols(plugin_dir, outfile, fmt):
   def merge_symbols(filename, dest):
     symbols, masked = parse_symbols(filename)
     for symbol, value in masked:
-      print("Warning ({}): {} ({}) masked".format(
+      print("Warning ({0}): {1} ({2}) masked".format(
         os.path.relpath(filename), symbol, value), file=sys.stderr)
     for symbol, value in symbols.items():
       has_value, source = dest.get(symbol, (None, None))
       if source is not None and has_value != value:
-        print("Warning ({}): {} ({}) masking same symbol from {} ({})".format(
+        print("Warning ({0}): {1} ({2}) masking same symbol from {3} ({4})".format(
           os.path.relpath(filename), symbol, value, os.path.relpath(source),
           has_value), file=sys.stderr)
       dest[symbol] = (value, filename)
@@ -459,7 +459,7 @@ def create_egg(pybin, source, dest, exclude_source=True):
 
     print("  [+]", filename)
     if not os.path.exists(filename):
-      raise IOError('does not exist: {}').format(filename)
+      raise IOError('does not exist: {0}'.format(filename))
     egg.writepy(filename)
     if not os.path.isdir(filename):
       continue

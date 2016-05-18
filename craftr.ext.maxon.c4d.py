@@ -28,8 +28,6 @@ from craftr.ext.compiler import gen_output, gen_objects
 from os import environ
 import re
 
-from . import python
-
 is_windows = (platform.name == 'win')
 is_osx = (platform.name == 'mac')
 

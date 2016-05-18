@@ -41,8 +41,8 @@ To use the Cinema 4D SDK from another version:
 
     craftr -ebDmaxon.c4d.path="C:\maxon\Cinema 4D R17 Dev"
 
-``craftr.ext.maxon.c4d.python``
-===============================
+``craftr.ext.maxon.py4d``
+=========================
 
 This Craftr modules contains useful functions to help developing
 Cinema 4D Python plugins. It allows you to easily create Python eggs
@@ -67,7 +67,7 @@ format them as a Python file, a class or in JSON format.
 
   # craftr_module(my_plugin)
   from craftr import *
-  from craftr.ext.maxon.c4d.python import export_res_symbols
+  from craftr.ext.maxon.py4d import export_res_symbols
 
   @task
   def symbols():
@@ -113,7 +113,7 @@ This script does exactly that.
 
   # craftr_module(my_plugin)
   from craftr import *
-  from craftr.ext.maxon.c4d.python import create_distro_task, Egg
+  from craftr.ext.maxon.py4d import create_distro_task, Egg
 
   bdist = create_distro_task(
     source_dir = path.local('devel'),
@@ -147,9 +147,12 @@ Cinema 4D version you are developing the plugin in.
 
 .. code-block:: python
 
+  from craftr.ext.maxon import py4d
+
+  @task
   def protect():
     pyp_file = join(project_dir, 'my_plugin.pyp')
-    maxon.c4d.python.protect_pyp(pyp_file)
+    py4d.protect_pyp(pyp_file)
 
 .. _apex: https://github.com/nr-plugins/apex
 .. __localimport: https://gist.github.com/NiklasRosenstein/f5690d8f36bbdc8e5556

@@ -1,5 +1,5 @@
 # -*- mode: python -*-
-# craftr_module(maxon.c4d.python)
+# craftr_module(maxon.py4d)
 #
 # Copyright (C) 2015 Niklas Rosenstein
 #
@@ -35,10 +35,13 @@ import subprocess
 import sys
 import zipfile
 
-try:
+if __name__ != '__main__':
   import craftr
-except ImportError:
+  import craftr.ext.maxon.c4d
+  from craftr.ext import maxon
+else:
   craftr = None
+  maxon = None
 
 # =====================================================================
 #  Resource symbol stuff
@@ -502,9 +505,6 @@ class Egg(object):
 # =====================================================================
 #  Python source protection
 # =====================================================================
-
-if __name__ == '__craftr__':
-  load_module('maxon.c4d')
 
 def protect_pyp(filename):
   ''' Runs the Cinema 4D source protect over the specified *filename*.

@@ -67,17 +67,13 @@ format them as a Python file, a class or in JSON format.
 
   # craftr_module(my_plugin)
   from craftr import *
-  from craftr.ext.maxon.py4d import export_res_symbols
+  from craftr.ext.maxon import py4d
 
-  @task
-  def symbols():
-    export_res_symbols(project_dir, None, format='class')
-    # or
-    export_res_symbols(project_dir, path.local('devel/res.py'), fmt='file')
+  symbols = py4d.extract_symbols_task(
+    outfile = path.local('devel/res'), format = 'file')
 
-This will format the symbols as a Python class and output it to stdout
-or write the symbols formatted as a Python file to the `devel/res.py`
-file.
+This will format the symbols as a Python module and write it into the
+`devel/res.py` file.
 
 External modules
 ----------------

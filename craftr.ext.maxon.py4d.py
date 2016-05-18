@@ -96,44 +96,46 @@ def parse_symbols_string(string):
   return (symbols, masked_symbols)
 
 
-def get_resource_files(plugin_dir):
+def get_resource_files(res_dir):
   ''' Returns a dictionary with various contents about a plugin's
   resource folder. Returns None if there is not resource folder. '''
 
-  resfolder = os.path.join(plugin_dir, 'res')
-  c4d_symbols = os.path.join(resfolder, 'c4d_symbols.h')
-  if not os.path.isdir(resfolder) or not os.path.isfile(c4d_symbols):
+  c4d_symbols = os.path.join(res_dir, 'c4d_symbols.h')
+  if not os.path.isdir(res_dir) or not os.path.isfile(c4d_symbols):
     return None
 
   results = {
-    'res': resfolder,
+    'res': res_dir,
     'c4d_symbols': c4d_symbols,
     'description': [],
     }
 
-  for desc in glob.iglob(os.path.join(resfolder, 'description', '*.h')):
+  for desc in glob.iglob(os.path.join(res_dir, 'description', '*.h')):
     results['description'].append(desc)
 
   return results
 
 
-def export_res_symbols(plugin_dir, outfile, fmt):
-  ''' Parses the symbols of the specified *plugin_dir* and formats
-  it based on the specified *format*. If *outfile* is specified, it
-  will be written into that file, otherwise it will be output to
-  stdout.
+def export_res_symbols(format, res_dir=None, outfile=None):
+  ''' Parses the symbols of one or more resource directories
+  and formats them according to *format*.
 
-  *format* by be one of `'json'`, `'file'` or `'class'`. *plugin_dir*
-  may be a list of directories as well in case multiple plugin resource
-  should be parsed together. '''
+  :param format: ``json``, ``class`` or ``file``
+  :param res_dir: A string pointing to a C4D plugin resource
+    directory or a list of such. Defaults to the ``res/``
+    directory of the currently executed module.
+  :param outfile: The output file name or None to print to stdout. '''
 
-  if fmt not in ('json', 'file', 'class'):
-    raise ValueError('invalid fmt value', fmt)
+  if format not in ('json', 'file', 'class'):
+    raise ValueError('invalid format: {0!r}'.format(format))
 
-  if isinstance(plugin_dir, str):
-    dirlist = [plugin_dir]
+  if res_dir is None:
+    res_dir = craftr.path.local('res')
+
+  if isinstance(res_dir, str):
+    dirlist = [res_dir]
   else:
-    dirlist = plugin_dir
+    dirlist = res_dir
 
   # Symbol name -> tuple of (value, filename).
   symbols = {}
@@ -152,10 +154,10 @@ def export_res_symbols(plugin_dir, outfile, fmt):
           has_value), file=sys.stderr)
       dest[symbol] = (value, filename)
 
-  for plugin_dir in dirlist:
-    files = get_resource_files(plugin_dir)
+  for dirname in dirlist:
+    files = get_resource_files(dirname)
     if files is None:
-      raise ValueError('no resource directory in {!r}'.format(plugin_dir))
+      raise ValueError('no resource directory in {!r}'.format(dirname))
 
     merge_symbols(files['c4d_symbols'], symbols)
     for filename in files['description']:
@@ -166,7 +168,7 @@ def export_res_symbols(plugin_dir, outfile, fmt):
   symbols = unpack(symbols)
   desc_symbols = unpack(desc_symbols)
 
-  fn = globals()['symbols_format_' + fmt]
+  fn = globals()['symbols_format_' + format]
   if outfile:
     with open(outfile, 'w') as fp:
       fn(symbols, desc_symbols, fp)
@@ -240,6 +242,23 @@ def render_template(__template_string, **context):
     return '\n'.join(result)
 
   return re.sub(expr, replace, __template_string, flags=re.M)
+
+
+def extract_symbols_task(format, res_dir=None, outfile=None):
+  ''' Creates a task that extracts resource symbols from the
+  plugin's resource directory and renders it in the specified
+  *format*.
+
+  The arguments are the same as for the :func:`export_res_symbols`
+  function. '''
+
+  def worker():
+    if outfile is None:
+      print()
+    export_res_symbols(format, res_dir, outfile)
+
+  builder = craftr.TargetBuilder(None, {}, {})
+  return builder.create_target(worker)
 
 
 # =====================================================================
@@ -411,7 +430,7 @@ def purge(directories, suffix='.pyc'):
 
 def create_distro_task(
     source_dir,
-    res_dir,
+    res_dir=None,
     versions=['2.6', '2.7'],
     setuptools_packages=[],
     eggs=[],
@@ -441,6 +460,9 @@ def create_distro_task(
     )
 
   :return: :class:`craftr.Target` '''
+
+  if not res_dir:
+    res_dir = craftr.path.local('res')
 
   def worker():
     for version in versions:

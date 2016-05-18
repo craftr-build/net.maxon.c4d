@@ -20,111 +20,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-'''# Cinema 4D Python Utilities
-
-This Craftr modules contains useful functions to help developing
-Cinema 4D Python plugins. It allows you to easily create Python eggs
-of external modules that you are using in a Plugin, extract Cinema 4D
-dialog and description resource symbols and automatically protect
-your Python plugin files (requires the [apex][] plugin to be installed).
-
-> Note: This file is a Craftr module but must be compatible with most
-> Python versions as some of its functions run this file as a script
-> in a sub-process.
-
-## Resource symbols
-
-The Python API does not come with a built-in functionality to access
-the dialog and description resource symbols of a Cinema 4D plugin. Manually
-hardcoding the symbols into a Python plugin's source is not an option for
-larger plugins. This module allows you to extract the resource symbols and
-format them as a Python file, a class or in JSON format.
-
-```python
-# craftr_module(my_plugin)
-from craftr import *
-from craftr.ext.maxon.c4d.python import export_res_symbols
-
-def symbols():
-  export_res_symbols(project_dir, None, format='class')
-  # or
-  export_res_symbols(project_dir, path.local('devel/res.py'), fmt='file')
-```
-
-This will format the symbols as a Python class and output it to stdout
-or write the symbols formatted as a Python file to the `devel/res.py`
-file.
-
-## External modules
-
-First, you *must* use `_localimport` to import libraries that are
-distributed with your plugin. You can find a version that you can
-copy & paste into your plugins source file [here][_localimport].
-
-If you want to use, and therefore also distribute, external Python modules
-with your plugin that you don't want to distribute in source (make sure that
-is allowed by the modules license), you can generate binary Python eggs
-using the functionality in this module.
-
-The following examples assume that you have external Python modules
-in a `devel` directory. For distribution, they shall be compiled and
-archived to the `res/modules2.6` and `res/modules2.7` directories.
-
-    my_plugin\
-      devel\
-        res.py
-        my_plugin_tools\
-          __init__.py
-          some_tools.py
-        some_package\
-          setup.py
-          src\
-            some_package\
-              __init__.py
-          etc...
-
-This script does exactly that.
-
-```python
-# craftr_module(my_plugin)
-from craftr import *
-from craftr.ext.maxon.c4d.python import C4DDistro, Egg
-
-class bdist(C4DDistro):
-  source_dir = path.local('devel')
-  res_dir = path.local('res')
-
-  # The versions to compile for. Defaults to exactly these values,
-  # so you can usually omitt it.
-  versions = ['2.6', '2.7']
-
-  # A list of directory names that are to be compiled using setuptools.
-  setuptools_packages = ['some_package']
-
-  # A list of eggs that should be created manually. You can specify
-  # the "zipped" parameter to specify the egg should be zipped or not.
-  eggs = [
-    Egg('lib.egg', ['nr.cli/nr', 'nr.strex/nr', 'res.py'], zipped=False),
-  ]
-```
-
-This can now be invoked using `craftr -fPythonDistr`. It requires that
-the programs `python2.6` and `python2.7` are present in your `PATH`!
-
-## Protecting your Python plugin from the command-line
-
-__Important__: This requires the [apex][] plugin to be installed to
-the Cinema 4D version you are developing the plugin in.
-
-```python
-def protect():
-  pyp_file = join(project_dir, 'my_plugin.pyp')
-  maxon.c4d.python.protect_pyp(pyp_file)
-```
-
-[apex]: https://github.com/nr-plugins/apex
-[_localimport]: https://gist.github.com/NiklasRosenstein/f5690d8f36bbdc8e5556
-'''
 
 from __future__ import print_function
 
@@ -139,6 +34,11 @@ import shutil
 import subprocess
 import sys
 import zipfile
+
+try:
+  import craftr
+except ImportError:
+  craftr = None
 
 # =====================================================================
 #  Resource symbol stuff
@@ -506,46 +406,57 @@ def purge(directories, suffix='.pyc'):
     recurse(dirname)
 
 
-class C4DDistro(object):
-  ''' This class can be inherited to generate python archives from
-  the information specified on class-level. The action happens when
-  the class is being constructed. '''
+def create_distro_task(
+    source_dir,
+    res_dir,
+    versions=['2.6', '2.7'],
+    setuptools_packages=[],
+    eggs=[],
+    do_purge=True,
+    requires=None):
+  ''' Creates a new task that builds and packages Python eggs from
+  the *source_dir* and puts them into the *res_dir*. This works with
+  setuptools packages as well as any Python module. A simple
+  example:
 
-  # source_dir
-  # res_dir
-  versions = ['2.6', '2.7']
-  setuptools_packages = []
-  manual_packages = []  # Deprecated, use `eggs` instead
-  eggs = []
-  do_purge = True
+  .. code-block:: python
 
-  def __init__(self):
-    self.results = []
-    for version in self.versions:
+    bdist = create_distro_task(
+      source_dir = path.local('devel'),
+      res_dir = path.local('res'),
+      eggs = [Egg(
+        name = 'storage-libs-{py}.egg',
+        zipped = False,
+        files = [
+          'res.py',
+          'nr.concurrency/nr',
+          'nr.c4d/nr',
+          'requests/requests',
+          'requests-toolbelt/requests_toolbelt'
+        ])
+      ],
+    )
+
+  :return: :class:`craftr.Target` '''
+
+  def worker():
+    for version in versions:
       pybin = 'python' + version
-      outdir = os.path.join(self.res_dir, 'modules' + version)
-      for package in self.setuptools_packages:
+      outdir = os.path.join(res_dir, 'modules' + version)
+      for package in setuptools_packages:
         if not os.path.isabs(package):
-          package = os.path.join(self.source_dir, package)
+          package = os.path.join(source_dir, package)
         bdist_egg(pybin, package, outdir)
         # XXX: Find output filename of egg.
-      for package in self.manual_packages:
-        name, files = package
-        name = name.format(py='py' + version)
-        outfile = os.path.join(outdir, name)
-        files = [
-          f if os.path.isabs(f) else os.path.join(self.source_dir, f)
-          for f in files]
-        create_egg(pybin, files, outfile)
-        self.results.append(outfile)
-        if self.do_purge:
-          purge(files)
-      for egg in self.eggs:
+      for egg in eggs:
         if not egg.base_dir:
-          egg.base_dir = self.source_dir
+          egg.base_dir = source_dir
         egg.build(pybin, version, outdir)
-        if self.do_purge:
+        if do_purge:
           purge(egg.files)
+
+  builder = craftr.TargetBuilder([], {}, {})
+  return craftr.task(worker, name=builder.name, requires=requires)
 
 
 class Egg(object):

@@ -1,4 +1,3 @@
-# -*- mode: python; -*-
 # craftr_module(<module_ident>)
 #
 # Copyright (C) <Year> <Name>
@@ -6,8 +5,6 @@
 
 from craftr import *
 session.path.append(path.local('..'))
-session.path.append(path.local('vendor'))
-session.update()
 
 from craftr.ext.maxon import c4d
 

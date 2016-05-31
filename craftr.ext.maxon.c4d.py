@@ -43,18 +43,22 @@ mode = 'debug' if debug else 'release'
 #   Evaluate pre-conditions and detect Cinema 4D path and release
 # =====================================================================
 
-if not c4d_path:
-  # We assume that the project folder is inside the Cinema 4D
-  # plugins directory.
-  c4d_path = normpath(join(__file__, '../../..'))
-
-if not release:
-  # Try to deduce the release number from the installation path.
-  match = re.search('Cinema\s+4D\s+R(\d+)', c4d_path, re.I)
+def _get_path_and_release():
+  match = re.search(r'(.*Cinema\s+4D\s+R(\d+).*?[/\\])', c4d_path or __file__, re.I)
   if not match:
-    error('could not determine C4D release number, please specify maxon.c4d.release')
-  release = int(match.group(1))
-  del match
+    return None, None
+  return match.groups()
+
+_data = _get_path_and_release()
+if not c4d_path:
+  if not _data[0]:
+    error('Cinema 4D installation path could not be determined.')
+  c4d_path = _data[0]
+if not release:
+  if not _data[1]:
+    error('Cinema 4D release could not be determined.')
+  release = int(_data[1])
+del _data
 
 
 cxx = platform.cxx

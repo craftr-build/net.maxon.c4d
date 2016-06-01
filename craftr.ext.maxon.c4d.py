@@ -44,7 +44,8 @@ mode = 'debug' if debug else 'release'
 # =====================================================================
 
 def _get_path_and_release():
-  match = re.search(r'(.*Cinema\s+4D\s+R(\d+).*?[/\\])', c4d_path or __file__, re.I)
+  path = (c4d_path or __file__) + '/'
+  match = re.search(r'(.*Cinema\s+4D\s+R(\d+).*?[/\\])', path, re.I)
   if not match:
     return None, None
   return match.groups()
@@ -176,7 +177,7 @@ debug_args = ['-debug', '-g_alloc=debug', '-g_console=true']
 
 def _msvc_objects(sources, frameworks=(), target_name=None, **kwargs):
   assert arch in ('x64', 'x86'), arch
-  assert release in range(13, 18)
+  assert release in range(13, 19)
 
   builder = TargetBuilder(sources, frameworks, kwargs, name=target_name)
   builder.add_framework(c4d_framework)
@@ -311,7 +312,7 @@ def _clang_get_stdlib():
 
 def _clang_objects(sources, frameworks=(), target_name=None, **kwargs):
   assert arch.startswith('x86_64'), arch
-  assert release in range(13, 18)
+  assert release in range(13, 19)
   builder = TargetBuilder(sources, frameworks, kwargs, name=target_name)
   builder.add_framework(c4d_framework)
   objects = gen_objects(builder.inputs, suffix=platform.obj)

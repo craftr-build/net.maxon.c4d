@@ -7,10 +7,14 @@ exec ("""class res(object):
   return result
  def tup(self, name, *subst):
   return (getattr(self, name), self.string(name, *subst))
- def file(self, *parts):
-  return os.path.join(self.project_path, *parts)
+ def path(self, *parts):
+  path = os.path.join(*parts)
+  if not os.path.isabs(path):
+   path = os.path.join(self.project_path, path)
+  return path
+ file = path  # backwards compatibility
  def bitmap(self, *parts):
   b = c4d.bitmaps.BaseBitmap()
-  if b.InitWith(self.file(*parts))[0] != c4d.IMAGERESULT_OK: return None
+  if b.InitWith(self.path(*parts))[0] != c4d.IMAGERESULT_OK: return None
   return b
  {{symbols}}\n""" + "res = res()")

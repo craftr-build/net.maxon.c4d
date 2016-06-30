@@ -67,8 +67,11 @@ def tup(name, *subst, **kwargs):
     return (name, string(name, *subst))
 
 
-def file(*parts):
-    return os.path.join(project_path, *parts)
+def path(*parts):
+    path = os.path.join(*parts)
+    if not os.path.isabs(path):
+        path = os.path.join(project_path, path)
+    return path
 
 
 def bitmap(*parts):
@@ -78,5 +81,6 @@ def bitmap(*parts):
         return None
     return bitmap
 
+file = path  # backwards compatibility
 
 {{symbols}}

@@ -20,10 +20,10 @@
 # THE SOFTWARE.
 
 from craftr import *
-craftr_min_version('0.20.0')
+craftr_min_version('1.1.1')
 
 from craftr.path import join, normpath, glob
-from craftr.ext import platform
+from craftr.ext import platform, rules
 from craftr.ext.compiler import gen_output, gen_objects
 from os import environ
 import re
@@ -38,6 +38,11 @@ c4d_path = environ.get('maxon.c4d.path', None)
 release = int(environ.get('maxon.c4d.release', 0))
 debug = environ.get('maxon.c4d.debug', environ.get('debug', False))
 mode = 'debug' if debug else 'release'
+
+# Say Hello!
+arch = platform.cxx.desc.get('target')
+info(platform.cxx.desc.get('version_str'))
+info('Cinema 4D R{0} for {1}'.format(release, arch))
 
 # =====================================================================
 #   Evaluate pre-conditions and detect Cinema 4D path and release
@@ -60,16 +65,6 @@ if not release:
     error('Cinema 4D release could not be determined.')
   release = int(_data[1])
 del _data
-
-
-cxx = platform.cxx
-ld = platform.ld
-lib = platform.ar
-
-arch = cxx.desc.get('target')
-
-info(cxx.desc.get('version_str'))
-info('Cinema 4D R{0} for {1}'.format(release, arch))
 
 resource_dir = join(c4d_path, 'resource')
 if release <= 15:
@@ -175,25 +170,16 @@ debug_args = ['-debug', '-g_alloc=debug', '-g_console=true']
 #   Compiler settings
 # =====================================================================
 
-def _msvc_objects(sources, frameworks=(), target_name=None, **kwargs):
-  assert arch in ('x64', 'x86'), arch
-  assert release in range(13, 19)
-
-  builder = TargetBuilder(sources, frameworks, kwargs, name=target_name)
+def _msvc_compile_hook(builder):
   builder.add_framework(c4d_framework)
-  objects = gen_objects(builder.inputs, suffix=platform.obj)
-
-  defines = builder.merge('defines')
-  include = builder.merge('include')
-  additional_flags = builder.merge('additional_flags')
-  additional_flags += builder.merge('msvc_additional_flags')
-  msvc_runtime_library = builder.get('msvc_runtime_library', None)
+  debug = builder.get('debug', options.get_bool('debug'))
   legacy_api = builder.get('legacy_api', False)
-  exceptions = builder.get('exceptions', False)
-  autodeps = builder.get('autodeps', True)
-  forced_include = builder.merge('forced_include')
+  builder.setdefault('exceptions', False)
 
-  defines += ['__PC']
+  rtlib = 'static' if release <= 15 else 'dynamic'
+  builder.setdefault('msvc_runtime_library', rtlib)
+
+  defines = ['__PC']
   if release >= 15:
     defines += ['MAXON_API', 'MAXON_TARGET_WINDOWS']
     defines += ['MAXON_TARGET_DEBUG'] if debug else ['MAXON_TARGET_RELEASE']
@@ -208,141 +194,50 @@ def _msvc_objects(sources, frameworks=(), target_name=None, **kwargs):
   if legacy_api:
     defines += ['__LEGACY_API']
 
-  command = [cxx['program']] + ('/nologo /c /W4 /WX- /MP /Gm- /Gs /Gy- '
-    '/fp:precise /Zc:wchar_t- /Gd /TP /wd4062 /wd4100 /wd4127 /wd4131 '
-    '/wd4201 /wd4210 /wd4242 /wd4244 /wd4245 /wd4305 /wd4310 /wd4324 '
-    '/wd4355 /wd4365 /wd4389 /wd4505 /wd4512 /wd4611 /wd4706 /wd4718 '
-    '/wd4740 /wd4748 /wd4996 /FC /errorReport:prompt /vmg /vms /w44263 '
-    '/we4264').split()
-  if cxx.version >= '18':
-    # required for parallel writes to .pdb files.
-    command += ['/FS']
-
-  if autodeps:
-    command += ['/showIncludes']
-    builder.target['deps'] = 'msvc'
-    builder.target['msvc_deps_prefix'] = cxx.deps_prefix
-
-  if msvc_runtime_library is None:
-    msvc_runtime_library = 'static' if release <= 15 else 'dynamic'
-  if msvc_runtime_library == 'dynamic':
-    command += ['/MTd' if debug else '/MT']
-  elif msvc_runtime_library == 'static':
-    command += ['/MDd' if debug else '/MD']
-  else:
-    raise ValueError('invalid msvc_runtime_library: {0!r}'.format(msvc_runtime_library))
-
   if debug:
-    command += ['/Od', '/Zi', '/RTC1']
+    flags = []
   else:
-    command += ['/Ox', '/Oy-', '/Oi', '/Ob2', '/Ot', '/GF']
+    # These are not set by the MSVC interface.
+    flags = ['/Oy-', '/Oi', '/Ob2', '/Ot', '/GF']
 
-  if exceptions:
-    command += ['/EHsc']
+  builder.add_framework('maxon.c4d._msvc_compile_hook',
+    defines = defines,
+    warn = 'all',
+    msvc_disable_warnings = (
+      '4062 4100 4127 4131 4201 4210 4242 4244 4245 4305 4310 4324 4355 '
+      '4365 4389 4505 4512 4611 4706 4718 4740 4748 4996').split(),
+    msvc_warnings_as_errors = ['4264'],
+    msvc_additional_flags = (
+      '/vmg /vms /w44263 /FC /errorReport:prompt /fp:precise /Zc:wchar_t- '
+      '/Gd /TP /WX- /MP /Gm- /Gs /Gy-').split() + flags,
+  )
 
-  command += ['/D' + x for x in defines]
-  command += ['/I' + x for x in include]
-  command += ['/FI' + x for x in forced_include]
-  command += additional_flags
-  command += ['$in', '/Fo$out']
-
-  return builder.create_target(command, outputs=objects, foreach=True)
-
-
-def _msvc_staticlib(output, inputs, frameworks=(), target_name=None, **kwargs):
-  builder = TargetBuilder(inputs, frameworks, kwargs, name=target_name)
-  output = gen_output(output, suffix=platform.lib)
-
-  # Write the names of the input files to a file to avoid too
-  # long command lines.
-  cmdfile = builder.write_command_file(builder.inputs, '.in')
-
-  # Generate the command.
-  command = [lib['program'], '/nologo', '/OUT:$out', '@' + cmdfile]
-  command += builder.merge('additional_flags')
-  return builder.create_target(command, outputs=[output])
-
-
-def _msvc_link(output, inputs, frameworks=(), target_name=None, **kwargs):
-  builder = TargetBuilder(inputs, frameworks, kwargs, name=target_name)
-
-  external_libs = builder.merge('external_libs')
-  external_libs = builder.expand_inputs(external_libs)
-
-  output_type = builder.get('output_type', 'dll')
-  additional_flags = builder.merge('additional_flags')
-  additional_flags += builder.merge('msvc_additional_flags')
-  libs = builder.merge('libs')
-  libs += builder.merge('msvc_libs')
-  libs += builder.merge('win_libs')
-  if arch == 'x86':
-    libs += builder.merge('win32_libs')
-  else:
-    libs += builder.merge('win64_libs')
-  libpath = builder.merge('libpath')
-
-  if output_type not in ('bin', 'dll'):
-    raise ValueError('invalid output_type: {0!r}'.format(output_type))
-  if output_type == 'dll':
-    suffix = lambda x: path.addsuffix(x, '.cdl64' if arch == 'x64' else '.cdl')
-  else:
-    suffix = getattr(platform, output_type)
-
-  infile = builder.write_command_file(builder.inputs, '.in')
-
-  output = gen_output(output, suffix=suffix)
-  command = [ld['program'], '/nologo', '/OUT:$out']
-  if output_type == 'dll':
-    command += ['/DLL']
-  if debug:
-    command += ['/debug']
-  command += path.addsuffix(libs, '.lib')
-  command += external_libs
-  command += ['/LIBPATH:' + x for x in libpath]
-  command += additional_flags
-  command += ['@' + infile]
-
-  _update_deps(output)
-  return builder.create_target(command, outputs=[output], implicit_deps=external_libs)
-
-
-def _clang_get_stdlib():
-  return 'libstdc++' if release <= 15 else 'libc++'
-
-
-def _clang_objects(sources, frameworks=(), target_name=None, **kwargs):
-  assert arch.startswith('x86_64'), arch
-  assert release in range(13, 19)
-  builder = TargetBuilder(sources, frameworks, kwargs, name=target_name)
+def _msvc_link_hook(builder):
+  assert arch in ('x86', 'x64'), arch
   builder.add_framework(c4d_framework)
-  objects = gen_objects(builder.inputs, suffix=platform.obj)
+  builder.setdefault('output_type', 'dll')
+  if builder.get('output_type') == 'dll':
+    builder.setdefault('output_suffix', '.cdl64' if arch == 'x64' else '.cdl')
 
-  defines = builder.merge('defines')
-  include = builder.merge('include')
-  additional_flags = builder.merge('additional_flags')
-  additional_flags += builder.merge('clang_additional_flags')
-  remove_flags = builder.merge('remove_flags')
-  remove_flags += builder.merge('clang_remove_flags')
+def _clang_compile_hook(builder):
+  builder.add_framework(c4d_framework)
+  debug = builder.get('debug', options.get_bool('debug'))
   legacy_api = builder.get('legacy_api', False)
-  exceptions = builder.get('exceptions', False)
-  autodeps = builder.get('autodeps', True)
-  stdlib = builder.get('stdlib', _clang_get_stdlib())
-  forced_include = builder.merge('forced_include')
+  builder.setdefault('cpp_stdlib', _clang_get_stdlib())
 
-  defines += ['C4D_COCOA', '__MAC']
+  defines = ['C4D_COCOA', '__MAC']
   if release >= 15:
     defines += ['MAXON_API', 'MAXON_TARGET_OSX']
     defines += ['MAXON_TARGET_DEBUG'] if debug else ['MAXON_TARGET_RELEASE']
     defines += ['MAXON_TARGET_64BIT']
   else:
-    defines += ['_DEBUG', 'DEBUG'] if defines else ['NDEBUG']
+    defines += ['_DEBUG', 'DEBUG'] if debug else ['NDEBUG']
     defines += ['__C4D_64BIT']
   if legacy_api:
     defines += ['__LEGACY_API']
 
-  command = [cxx['program'], '-c']
   if release <= 15:
-    command += (
+    flags = (
       '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
       '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
       '-fno-rtti -fpascal-strings '
@@ -359,7 +254,7 @@ def _clang_objects(sources, frameworks=(), target_name=None, **kwargs):
       '-fvisibility=hidden -fvisibility-inlines-hidden -Wno-sign-conversion '
       '-Wno-logical-op-parentheses -fno-math-errno').split()
   else:
-    command += (
+    flags = (
       '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
       '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
       '-fno-rtti -fpascal-strings -Wmissing-field-initializers '
@@ -375,126 +270,70 @@ def _clang_objects(sources, frameworks=(), target_name=None, **kwargs):
       '-msse3 -fvisibility=hidden -fvisibility-inlines-hidden '
       '-Wno-sign-conversion -fno-math-errno').split()
 
-  if not exceptions:
-    command += ['-fno-exceptions']
+  # These flags are not usually set in the C4D SDK.
+  flags += ['-Wno-unused-private-field']
 
+  forced_include = []
   if release <= 15:
     if debug:
-      command += ['-include', join(source_dir, 'ge_mac_debug_flags.h')]
+      forced_include = [join(source_dir, 'ge_mac_debug_flags.h')]
     else:
-      command += ['-include', join(source_dir, 'ge_mac_flags.h')]
+      forced_include = [join(source_dir, 'ge_mac_flags.h')]
 
-  command += ['-stdlib={}'.format(stdlib)]
-  command += ['-g', '-O0'] if debug else ['-O3']
-  command += ['-D' + x for x in defines]
-  command += ['-I' + x for x in include]
-  command += utils.flatten(('-include', x) for x in forced_include)
-  command += additional_flags
-
-  if autodeps:
-    builder.target['depfile'] = '$out.d'
-    builder.target['deps'] = 'gcc'
-    command += ['-MMD', '-MF', '$depfile']
-  command += ['-c', '$in', '-o', '$out']
-
-  # Remove the specified flags and keep every flag that could not
-  # be removed from the command.
-  remove_flags = set(remove_flags)
-  for flag in list(remove_flags):
-    count = 0
-    while True:
-      try:
-        command.remove(flag)
-      except ValueError:
-        break
-      count += 1
-    if count != 0:
-      remove_flags.remove(flag)
-  if remove_flags:
-    fmt = ' '.join(shell.quote(x) for x in remove_flags)
-    builder.log('warn', "flags not removed: {0}".format(fmt))
-
-  builder.add_framework(builder.name, libs=['c++'])
-  return builder.create_target(command, outputs=objects, foreach=True)
-
-
-def _clang_staticlib(output, inputs, frameworks=(), target_name=None, **kwargs):
-  builder = TargetBuilder(inputs, frameworks, kwargs, name=target_name)
-  output = gen_output(output, suffix=platform.lib)
-
-  command = [lib['program'], 'rcs']
-  command += builder.merge('additional_flags')
-  command += ['$out', '$in']
-  return builder.create_target(command, outputs=[output])
-
-
-def _clang_link(output, inputs, frameworks=(), target_name=None, **kwargs):
-  builder = TargetBuilder(inputs, frameworks, kwargs, name=target_name)
-
-  output_type = builder.get('output_type', 'dll')
-  stdlib = builder.get('stdlib', _clang_get_stdlib())
-  debug = builder.get('debug', False)
-  libs = builder.merge('libs')
-  libs += builder.merge('clang_libs')
-  libs += builder.merge('osx_libs')
-  external_libs = builder.merge('external_libs')
-  additional_flags = builder.merge('additional_flags')
-
-  assert output_type in ('bin', 'dll')
-  output = gen_output(output, suffix=getattr(platform, output_type))
-  command = [ld['program'], '-stdlib=' + stdlib]
-  command += ['-shared'] if output_type == 'dll' else []
-  command += ['-g'] if debug else []
-  command += ['-l' + x for x in libs]
-  command += external_libs
-  command += additional_flags
-  command += ['$in', '-o', '$out']
-
-  _update_deps(output)
-  return builder.create_target(command, outputs=[output], implicit_deps=external_libs)
-
-
-if is_windows:
-  objects = _msvc_objects
-  staticlib = _msvc_staticlib
-  link = _msvc_link
-elif is_osx:
-  objects = _clang_objects
-  staticlib = _clang_staticlib
-  link = _clang_link
-else:
-  assert False
-
-
-object_files = objects(
-  sources = sources,
-)
-
-library = staticlib(
-  output = 'c4dsdk-r{0}-{1}'.format(release, mode),
-  inputs = object_files,
-)
-c4d_framework['external_libs'] += library.outputs
-
-run = Target(
-  command = [app] + debug_args,
-  pool = 'console',
-  explicit = True,
-)
-
-if is_windows:
-  run.command = ['cmd', '/c', 'start', shell.safe('"parentconsole"')] + run.command
-
-if is_osx:
-  lldb = Target(
-    command = ['lldb', '--', app],
-    pool = 'console',
-    explicit = True,
+  builder.add_framework('maxon.c4d._clang_compile_hook',
+    defines = defines,
+    forced_include = forced_include,
+    additional_flags = flags
   )
 
+def _clang_link_hook(builder):
+  builder.add_framework(c4d_framework)
+  builder.setdefault('output_type', 'dll')
 
+def _clang_get_stdlib():
+  return 'stdc++' if release <= 15 else 'c++'
+
+ar = platform.ar
+cxx = platform.cxx.fork()
+ld = platform.ld.fork(language='c++')
+if platform.cxx.name == 'MSVC':
+  cxx.register_hook('compile', _msvc_compile_hook)
+  ld.register_hook('link', _msvc_link_hook)
+elif platform.cxx.name in ('gcc', 'clang', 'llvm'):
+  cxx.register_hook('compile', _clang_compile_hook)
+  ld.register_hook('link', _clang_link_hook)
+else:
+  error('unsupported compiler: {0!r}'.format(cxx.name))
+
+def objects(*args, **kwargs):
+  return cxx.compile(*args, **kwargs)
+
+def staticlib(*args, **kwargs):
+  return ar.staticlib(*args, **kwargs)
+
+def link(*args, **kwargs):
+  return ld.link(*args, **kwargs)
+
+# =====================================================================
+#   C4D SDK library
+# =====================================================================
+
+c4dsdk_lib = staticlib(
+  output = 'c4dsdk-r{0}-{1}'.format(release, mode),
+  inputs = objects(
+    sources = sources
+  )
+)
+
+c4d_framework['external_libs'] += c4dsdk_lib.outputs
+
+run = rules.run([app] + debug_args)
+
+lldb = rules.run(['lldb', '--', app])
 
 def _update_deps(path):
+  # TODO: We can't do this with the "new" re-use of the platform compilers
   run.order_only_deps.append(path)
   if 'lldb' in globals():
     run.order_only_deps.append(path)
+

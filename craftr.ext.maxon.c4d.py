@@ -200,7 +200,7 @@ def _msvc_compile_hook(builder):
     # These are not set by the MSVC interface.
     flags = ['/Oy-', '/Oi', '/Ob2', '/Ot', '/GF']
 
-  builder.add_framework('maxon.c4d._msvc_compile_hook',
+  builder.add_framework(Framework('maxon.c4d._msvc_compile_hook',
     defines = defines,
     warn = 'all',
     msvc_disable_warnings = (
@@ -210,7 +210,7 @@ def _msvc_compile_hook(builder):
     msvc_additional_flags = (
       '/vmg /vms /w44263 /FC /errorReport:prompt /fp:precise /Zc:wchar_t- '
       '/Gd /TP /WX- /MP /Gm- /Gs /Gy-').split() + flags,
-  )
+  ), local=True)
 
 def _msvc_link_hook(builder):
   assert arch in ('x86', 'x64'), arch
@@ -280,11 +280,11 @@ def _clang_compile_hook(builder):
     else:
       forced_include = [join(source_dir, 'ge_mac_flags.h')]
 
-  builder.add_framework('maxon.c4d._clang_compile_hook',
+  builder.add_framework(Framework('maxon.c4d._clang_compile_hook',
     defines = defines,
     forced_include = forced_include,
     additional_flags = flags
-  )
+  ), local=True)
 
 def _clang_link_hook(builder):
   builder.add_framework(c4d_framework)
@@ -296,7 +296,7 @@ def _clang_get_stdlib():
 ar = platform.ar
 cxx = platform.cxx.fork()
 ld = platform.ld.fork(language='c++')
-if platform.cxx.name == 'MSVC':
+if platform.cxx.name == 'msvc':
   cxx.register_hook('compile', _msvc_compile_hook)
   ld.register_hook('link', _msvc_link_hook)
 elif platform.cxx.name in ('gcc', 'clang', 'llvm'):
@@ -329,7 +329,7 @@ c4d_framework['external_libs'] += c4dsdk_lib.outputs
 
 run = rules.run([app] + debug_args)
 
-lldb = rules.run(['lldb', '--', app])
+if is_osx: lldb = rules.run(['lldb', '--', app])
 
 def _update_deps(path):
   # TODO: We can't do this with the "new" re-use of the platform compilers

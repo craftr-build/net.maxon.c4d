@@ -38,11 +38,7 @@ c4d_path = environ.get('maxon.c4d.path', None)
 release = int(environ.get('maxon.c4d.release', 0))
 debug = environ.get('maxon.c4d.debug', environ.get('debug', False))
 mode = 'debug' if debug else 'release'
-
-# Say Hello!
 arch = platform.cxx.desc.get('target')
-info(platform.cxx.desc.get('version_str'))
-info('Cinema 4D R{0} for {1}'.format(release, arch))
 
 # =====================================================================
 #   Evaluate pre-conditions and detect Cinema 4D path and release
@@ -337,3 +333,6 @@ def _update_deps(path):
   if 'lldb' in globals():
     run.order_only_deps.append(path)
 
+# Say Hello!
+info(cxx.desc.get('version_str'))
+info('Cinema 4D R{0} for {1}'.format(release, arch))

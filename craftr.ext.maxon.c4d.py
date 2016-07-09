@@ -308,6 +308,7 @@ def staticlib(*args, **kwargs):
   return ar.staticlib(*args, **kwargs)
 
 def link(*args, **kwargs):
+  kwargs.setdefault('force_suffix', '.cdl64' if arch == 'x64' else '.cdl')
   return ld.link(*args, **kwargs)
 
 # =====================================================================

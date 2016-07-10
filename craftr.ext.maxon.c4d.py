@@ -212,6 +212,7 @@ def _msvc_link_hook(builder):
   assert arch in ('x86', 'x64'), arch
   builder.add_framework(c4d_framework)
   builder.setdefault('output_type', 'dll')
+  builder.setdefault('force_suffix', '.cdl64' if arch == 'x64' else '.cdl')
   if builder.get('output_type') == 'dll':
     builder.setdefault('output_suffix', '.cdl64' if arch == 'x64' else '.cdl')
 
@@ -308,7 +309,6 @@ def staticlib(*args, **kwargs):
   return ar.staticlib(*args, **kwargs)
 
 def link(*args, **kwargs):
-  kwargs.setdefault('force_suffix', '.cdl64' if arch == 'x64' else '.cdl')
   return ld.link(*args, **kwargs)
 
 # =====================================================================

@@ -213,8 +213,6 @@ def _msvc_link_hook(builder):
   builder.add_framework(c4d_framework)
   builder.setdefault('output_type', 'dll')
   builder.setdefault('force_suffix', '.cdl64' if arch == 'x64' else '.cdl')
-  if builder.get('output_type') == 'dll':
-    builder.setdefault('output_suffix', '.cdl64' if arch == 'x64' else '.cdl')
 
 def _clang_compile_hook(builder):
   builder.add_framework(c4d_framework)

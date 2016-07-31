@@ -256,7 +256,7 @@ def _clang_compile_hook(builder):
       '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
       '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
       '-fpascal-strings -Wmissing-field-initializers '
-      '-Wmissing-prototypes -Wdocumentation -Wno-non-virtual-dtor '
+      '-Wmissing-prototypes -Wno-non-virtual-dtor '
       '-Woverloaded-virtual -Wno-exit-time-destructors -Wmissing-braces '
       '-Wparentheses -Wno-switch -Wunused-function -Wunused-label '
       '-Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body '

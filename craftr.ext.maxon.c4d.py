@@ -19,6 +19,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+# The C4D SDK is compiled without rtti by default. This option is read
+# by the compiler modules.
+environ.setdefault('rtti', 'false')
+
 from craftr import *
 craftr_min_version('1.1.1')
 
@@ -235,8 +239,7 @@ def _clang_compile_hook(builder):
     flags = (
       '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
       '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
-      '-fno-rtti -fpascal-strings '
-      '-Wno-missing-field-initializers -Wno-missing-prototypes '
+      '-fpascal-strings -Wno-missing-field-initializers -Wno-missing-prototypes '
       '-Wno-non-virtual-dtor -Woverloaded-virtual -Wno-exit-time-destructors '
       '-Wmissing-braces -Wparentheses -Wno-switch -Wunused-function '
       '-Wunused-label -Wno-unused-parameter -Wunused-variable -Wunused-value '
@@ -252,7 +255,7 @@ def _clang_compile_hook(builder):
     flags = (
       '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
       '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
-      '-fno-rtti -fpascal-strings -Wmissing-field-initializers '
+      '-fpascal-strings -Wmissing-field-initializers '
       '-Wmissing-prototypes -Wdocumentation -Wno-non-virtual-dtor '
       '-Woverloaded-virtual -Wno-exit-time-destructors -Wmissing-braces '
       '-Wparentheses -Wno-switch -Wunused-function -Wunused-label '

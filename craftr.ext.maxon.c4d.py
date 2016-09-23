@@ -123,9 +123,9 @@ if python_ver:
     python_arch = '86' if arch == 'x86' else '64'
     python_fw = join(python_res, 'Python.win' + python_arch + '.framework')
     python_lib = 'python' + python_ver.replace('.', '')
-    python_lib_path = join(python_fw, 'libs')
+    python_lib_path = join(python_fw, 'libs', 'python' + python_ver.replace('.', ''))
     python_lib_full = join(python_lib_path, python_lib + '.lib')
-    python_include = join(python_fw, 'include')
+    python_include = join(python_fw, 'include', 'python' + python_ver.replace('.', ''))
 
     pylib = Framework(
       include = [python_include, path.local('fix/python_api')],

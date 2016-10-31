@@ -124,8 +124,16 @@ if python_ver:
     python_fw = join(python_res, 'Python.win' + python_arch + '.framework')
     python_lib = 'python' + python_ver.replace('.', '')
     python_lib_path = join(python_fw, 'libs', 'python' + python_ver.replace('.', ''))
+
     python_lib_full = join(python_lib_path, python_lib + '.lib')
+    if not path.isdir(python_lib_full):
+      python_lib_full = path.dirname(python_lib_full)
+
     python_include = join(python_fw, 'include', 'python' + python_ver.replace('.', ''))
+    if not path.isdir(python_include):
+      python_include = path.join(path.dirname(python_include), 'python' + python_ver)
+    if not path.isdir(python_include):
+      python_include = path.dirname(python_include)
 
     pylib = Framework(
       include = [python_include, path.local('fix/python_api')],

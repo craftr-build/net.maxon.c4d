@@ -208,6 +208,11 @@ def _msvc_compile_hook(builder):
     # These are not set by the MSVC interface.
     flags = ['/Oy-', '/Oi', '/Ob2', '/Ot', '/GF']
 
+  if cxx.version >= '19.00.24':
+    # Cinema 4D does not properly detect Visual Studio 2015 Update 3 and
+    # adds `#define decltype typeof` in compilerdetection.h.
+    defines += ['_HAS_DECLTYPE']
+
   builder.add_framework(Framework('maxon.c4d._msvc_compile_hook',
     defines = defines,
     warn = 'all',

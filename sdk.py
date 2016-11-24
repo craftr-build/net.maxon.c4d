@@ -74,7 +74,7 @@ def get_windows_framework():
     logger.info("prepare_link()")
     logger.info("----------------------------")
     suffix = '.cdl64' if cxc.target_arch == 'x64' else '.cdl'
-    builder.option_kwargs.setdefault('force_suffix', suffix)
+    builder.option_kwargs.setdefault('suffix', suffix)
 
   return Framework('maxon.c4d',
     debug = debug,
@@ -84,7 +84,7 @@ def get_windows_framework():
     warn = 'all',
     msvc_disable_warnings = (
       '4062 4100 4127 4131 4201 4210 4242 4244 4245 4305 4310 4324 4355 '
-      '4365 4389 4505 4512 4611 4706 4718 4740 4748 4996').split(),
+      '4365 4389 4505 4512 4611 4706 4718 4740 4748 4996 4595').split(),
     msvc_warnings_as_errors = ['4264'],
     msvc_additional_flags = (
       '/vmg /vms /w44263 /FC /errorReport:prompt /fp:precise /Zc:wchar_t- '

@@ -66,3 +66,4 @@ c4d_sdk_library = cxx_library(
   ),
   output = 'cinema4d-{}-{}'.format(mode, cxc.target_arch)
 )
+cxx_extend_framework(c4d_sdk, c4d_sdk_library)

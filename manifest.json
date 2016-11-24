@@ -1,0 +1,28 @@
+{
+  "name": "lib.cxx.maxon.c4d",
+  "version": "1.0.0",
+  "author": "",
+  "url": "",
+  "dependencies": {
+    "lang.cxx": "*"
+  },
+  "options": {
+    "debug": {
+      "type": "bool"
+    },
+    "rtti": {
+      "type": "bool",
+      "help": "Whether to use RTTI, disabled by default.",
+      "default": "false"
+    },
+    "c4d_path": {
+      "type": "string",
+      "help": "Path to the Cinema 4D installation to use. By default, it is derived from the current working directory"
+    },
+    "release": {
+      "type": "string",
+      "help": "The Cinema 4D release version number. By default, it is derived from the c4d_path."
+    }
+  },
+  "loaders": []
+}

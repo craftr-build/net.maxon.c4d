@@ -44,17 +44,17 @@ include = map(path.norm, include)
 
 def get_windows_framework():
   debug = c4d.options.debug
-  assert cxc.target_arch in ('x86', 'x64')
+  arch = 'x64' if '64' in cxc.target_arch else 'x86'
 
   defines = ['__PC']
   if c4d.options.release >= 15:
     defines += ['MAXON_API', 'MAXON_TARGET_WINDOWS']
     defines += ['MAXON_TARGET_DEBUG'] if debug else ['MAXON_TARGET_RELEASE']
-    if cxc.target_arch == 'x64':
+    if arch == 'x64':
       defines += ['MAXON_TARGET_64BIT']
   else:
     defines += ['_DEBUG', 'DEBUG'] if debug else ['NDEBUG']
-    if cxc.target_arch == 'x64':
+    if arch == 'x64':
       defines += ['__C4D_64BIT', 'WIN64', '_WIN64']
     else:
       defines += ['WIN32', '_WIN32']
@@ -86,9 +86,13 @@ def get_windows_framework():
       '4062 4100 4127 4131 4201 4210 4242 4244 4245 4305 4310 4324 4355 '
       '4365 4389 4505 4512 4611 4706 4718 4740 4748 4996 4595').split(),
     msvc_warnings_as_errors = ['4264'],
-    msvc_additional_flags = (
+    msvc_compile_additional_flags = (
       '/vmg /vms /w44263 /FC /errorReport:prompt /fp:precise /Zc:wchar_t- '
       '/Gd /TP /WX- /MP /Gm- /Gs /Gy-').split() + flags,
+    clangcl_compile_additional_flags = (
+      '-Wno-unused-parameter -Wno-macro-redefined -Wno-microsoft-enum-value '
+      '-Wno-unused-private-field'.split()
+    ),
     cxc_link_prepare_callbacks = [prepare_link]
   )
 

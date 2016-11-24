@@ -12,7 +12,7 @@ plugin = cxx_library(
     sources = glob(['src/**/*.cpp']),
     frameworks = [c4d_sdk]
   ),
-  output = __name__,
+  output = local('myplugin'),
   link_style = 'shared'
 )
 ```

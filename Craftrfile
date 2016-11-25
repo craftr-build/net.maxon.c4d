@@ -1,0 +1,73 @@
+# Copyright (C) 2016  Niklas Rosenstein
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+
+__all__ = []
+
+import functools
+import os
+import re
+
+session.options.setdefault('rtti', options.rtti)
+
+# Derive default option values and validat them.
+if platform.name not in ('win', 'mac'):
+  error('unsupported platform: {!r}'.format(platform.name))
+
+@functools.lru_cache()
+def get_c4d_path_and_release():
+  path = (options.c4d_path or __file__) + '/'
+  match = re.search(r'(.*Cinema\s+4D\s+R(\d+).*?[/\\])', path, re.I)
+  if not match:
+    error('C4D installation path could not be determined')
+  return match.groups()
+
+if not options.c4d_path:
+  options.c4d_path = get_c4d_path_and_release()[0]
+if not options.release:
+  options.release = get_c4d_path_and_release()[1]
+options.release = int(options.release)
+
+# Find important directories in the C4D installation.
+dirs = Namespace()
+dirs.c4d = options.c4d_path
+dirs.resource = path.join(dirs.c4d, 'resource')
+if options.release <= 15:
+  dirs.source = path.join(dirs.resource, '_api')
+else:
+  dirs.source = path.norm(path.join(dirs.c4d, 'frameworks/cinema.framework/source'))
+
+# Gather all SDK source files.
+sources = glob(['**/*.cpp'], parent = dirs.source)
+if not sources:
+  error('no C4D SDK sources found, source directory = "{}"'.format(dirs.source))
+
+# Load the frameworks.
+sdk, legacy_sdk = load_file('sdk.py').get_frameworks()
+python = load_file('python.py').get_framework()
+
+load_module('lang.cxx.*')
+mode = 'debug' if options.debug else 'release'
+c4d_sdk_library = cxx_library(
+  inputs = cpp_compile(
+    sources = sources,
+    frameworks = [sdk]
+  ),
+  output = 'cinema4d-{}-{}'.format(mode, cxc.target_arch)
+)
+cxx_extend_framework(sdk, c4d_sdk_library)
+
+# Export the C4D release into the global namespace to make it easier to
+# retrieve from other modules.
+release = options.release

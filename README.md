@@ -5,14 +5,14 @@ plugins.
 
 ```python
 load_module('lang.cxx.*')
-load_module('lib.cxx.maxon.c4d.*')
+c4d = load_module('lib.cxx.maxon.c4d')
 
 plugin = cxx_library(
+  link_style = 'shared',
   inputs = cpp_compile(
     sources = glob(['src/**/*.cpp']),
-    frameworks = [c4d_sdk]
+    frameworks = [c4d.sdk]
   ),
-  output = local('myplugin'),
-  link_style = 'shared'
+  output = local('myplugin')
 )
 ```

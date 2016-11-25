@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
-__all__ = ['c4d_sdk', 'c4d_legacy_sdk', 'c4d_python']
+__all__ = []
 
 import functools
 import os
@@ -54,16 +54,20 @@ if not sources:
   error('no C4D SDK sources found, source directory = "{}"'.format(dirs.source))
 
 # Load the frameworks.
-c4d_sdk, c4d_legacy_sdk = load_file('sdk.py').get_frameworks()
-c4d_python = load_file('python.py').get_framework()
+sdk, legacy_sdk = load_file('sdk.py').get_frameworks()
+python = load_file('python.py').get_framework()
 
 load_module('lang.cxx.*')
 mode = 'debug' if options.debug else 'release'
 c4d_sdk_library = cxx_library(
   inputs = cpp_compile(
     sources = sources,
-    frameworks = [c4d_sdk]
+    frameworks = [sdk]
   ),
   output = 'cinema4d-{}-{}'.format(mode, cxc.target_arch)
 )
-cxx_extend_framework(c4d_sdk, c4d_sdk_library)
+cxx_extend_framework(sdk, c4d_sdk_library)
+
+# Export the C4D release into the global namespace to make it easier to
+# retrieve from other modules.
+release = options.release

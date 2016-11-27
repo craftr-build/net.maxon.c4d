@@ -65,7 +65,7 @@ def get_windows_framework():
     # These are not set by the MSVC interface.
     flags = ['/Oy-', '/Oi', '/Ob2', '/Ot', '/GF']
 
-  if cxc.version >= '19.00.24':
+  if cxc.name == 'msvc' and cxc.version >= '19.00.24':
     # Cinema 4D does not properly detect Visual Studio 2015 Update 3 and
     # adds `#define decltype typeof` in compilerdetection.h.
     defines += ['_HAS_DECLTYPE']
@@ -90,6 +90,9 @@ def get_windows_framework():
     clangcl_compile_additional_flags = (
       '-Wno-unused-parameter -Wno-macro-redefined -Wno-microsoft-enum-value '
       '-Wno-unused-private-field'.split()
+    ),
+    llvm_compile_additional_flags = (
+      '-fms-memptr-rep=virtual -fms-memptr-rep=single'.split()  # /vmg /vms
     ),
     cxc_link_prepare_callbacks = [prepare_link]
   )

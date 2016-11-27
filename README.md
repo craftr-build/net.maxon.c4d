@@ -23,3 +23,4 @@ plugin = cxx_library(
   instead of `c4d.sdk`)
 - Provides a header `c4d_Python.h` that conveniently includes `Python.h`
   which is not straight forward
+- Supports compilation with MSVC, Clang-CL and Clang (Mac OS only)

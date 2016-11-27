@@ -71,7 +71,7 @@ def get_windows_framework():
     defines += ['_HAS_DECLTYPE']
 
   def prepare_link(linker, builder):
-    suffix = '.cdl64' if cxc.target_arch == 'x64' else '.cdl'
+    suffix = '.cdl64' if arch == 'x64' else '.cdl'
     builder.option_kwargs.setdefault('suffix', suffix)
 
   return Framework('maxon.c4d',

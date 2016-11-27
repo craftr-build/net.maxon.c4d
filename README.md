@@ -16,3 +16,10 @@ plugin = cxx_library(
   output = local('myplugin')
 )
 ```
+
+## Features
+
+- Provides `__LEGACY_API` functionality for R17+ (just use `c4d.legacy_sdk`
+  instead of `c4d.sdk`)
+- Provides a header `c4d_Python.h` that conveniently includes `Python.h`
+  which is not straight forward

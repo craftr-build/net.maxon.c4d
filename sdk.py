@@ -150,7 +150,7 @@ def get_mac_framework():
   flags += ['-Wno-unused-private-field']
 
   forced_include = []
-  if release <= 15:
+  if c4d.options.release <= 15:
     if debug:
       forced_include = [join(source_dir, 'ge_mac_debug_flags.h')]
     else:
@@ -182,4 +182,7 @@ def get_frameworks():
     frameworks = [c4d_sdk],
     defines = ['__LEGACY_API']
   )
+  if c4d.options.release >= 17:
+    c4d_legacy_sdk['include'] = [local('fix')]
+    c4d_legacy_sdk['forced_include'] = ['legacy.h']
   return c4d_sdk, c4d_legacy_sdk

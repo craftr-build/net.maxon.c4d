@@ -71,8 +71,6 @@ def get_windows_framework():
     defines += ['_HAS_DECLTYPE']
 
   def prepare_link(linker, builder):
-    logger.info("prepare_link()")
-    logger.info("----------------------------")
     suffix = '.cdl64' if cxc.target_arch == 'x64' else '.cdl'
     builder.option_kwargs.setdefault('suffix', suffix)
 

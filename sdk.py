@@ -72,7 +72,7 @@ def get_windows_framework():
 
   def prepare_link(linker, builder):
     suffix = '.cdl64' if arch == 'x64' else '.cdl'
-    builder.option_kwargs.setdefault('suffix', suffix)
+    builder.setdefault('dll_suffix', suffix)
 
   return Framework('maxon.c4d',
     debug = debug,
@@ -101,7 +101,7 @@ def get_windows_framework():
 def get_mac_framework():
   debug = c4d.options.debug
   stdlib = 'stdc++' if options.release <= 15 else 'c++'
-  builder.option_kwargs.setdefault('cpp_stdlib', stdlib)
+  builder.setdefault('cpp_stdlib', stdlib)
 
   defines = ['C4D_COCOA', '__MAC']
   if c4d.options.release >= 15:

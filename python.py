@@ -55,12 +55,12 @@ def get_framework():
   elif platform.name == 'mac':
     fw_path = join(resource, 'Python.osx.framework')
     lib = 'Python.osx'
-    lib_path = python_fw
+    lib_path = fw_path
     lib_full_path = join(lib_path, lib)
-    include = join(python_fw, 'include', 'python' + python_ver)
+    include = join(fw_path, 'include', 'python' + version)
 
     return Framework('maxon.c4d_python',
-      include = [include, path.local('fix/python_api')],
+      include = [include, local('fix/python_api')],
       external_libs = [lib_full_path],
     )
   else:

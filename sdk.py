@@ -100,8 +100,7 @@ def get_windows_framework():
 
 def get_mac_framework():
   debug = c4d.options.debug
-  stdlib = 'stdc++' if options.release <= 15 else 'c++'
-  builder.setdefault('cpp_stdlib', stdlib)
+  stdlib = 'stdc++' if c4d.options.release <= 15 else 'c++'
 
   defines = ['C4D_COCOA', '__MAC']
   if c4d.options.release >= 15:
@@ -111,13 +110,11 @@ def get_mac_framework():
   else:
     defines += ['_DEBUG', 'DEBUG'] if debug else ['NDEBUG']
     defines += ['__C4D_64BIT']
-  if legacy_api:
-    defines += ['__LEGACY_API']
 
   if c4d.options.release <= 15:
     flags = (
       '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
-      '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
+      '-fmacro-backtrace-limit=0 -Wno-trigraphs '
       '-fpascal-strings -Wno-missing-field-initializers -Wno-missing-prototypes '
       '-Wno-non-virtual-dtor -Woverloaded-virtual -Wno-exit-time-destructors '
       '-Wmissing-braces -Wparentheses -Wno-switch -Wunused-function '
@@ -133,9 +130,9 @@ def get_mac_framework():
   else:
     flags = (
       '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
-      '-fmacro-backtrace-limit=0 -std=c++11 -Wno-trigraphs '
+      '-fmacro-backtrace-limit=0 -Wno-trigraphs '
       '-fpascal-strings -Wmissing-field-initializers '
-      '-Wmissing-prototypes -Wno-non-virtual-dtor '
+      '-Wno-missing-prototypes -Wno-non-virtual-dtor '
       '-Woverloaded-virtual -Wno-exit-time-destructors -Wmissing-braces '
       '-Wparentheses -Wno-switch -Wunused-function -Wunused-label '
       '-Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body '
@@ -158,6 +155,8 @@ def get_mac_framework():
       forced_include = [join(source_dir, 'ge_mac_flags.h')]
 
   def prepare_compile(compiler, builder):
+    builder.setdefault('cpp_stdlib', stdlib)
+    builder.setdefault('std', 'c++11')
     builder.add_local_framework('maxon.c4d_sdk.mac.compile',
       additional_flags = flags
     )
@@ -165,7 +164,7 @@ def get_mac_framework():
   return Framework('maxon.c4d_sdk',
     debug = debug,
     defines = defines,
-    include = c4d.include,
+    include = include,
     exceptions = False,
     forced_include = forced_include,
     cxc_compile_prepare_callbacks = [prepare_compile]

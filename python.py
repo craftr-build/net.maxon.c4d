@@ -13,12 +13,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-cxc = load_module('lang.cxx').cxc
-c4d = session.module.namespace
+cxc = load_module('craftr.lang.cxx').cxc
 
-if c4d.options.release >= 17:
+if options.release >= 17:
   version = '2.7'
-elif c4d.options.release >= 12:
+elif options.release >= 12:
   version = '2.6'
 else:
   version = None
@@ -26,10 +25,10 @@ else:
 
 def get_framework():
   join = path.join
-  if c4d.options.release >= 16:
-    resource = join(c4d.dirs.resource, 'modules', 'python')
+  if options.release >= 16:
+    resource = join(__module__.dirs.resource, 'modules', 'python')
   else:
-    resource = join(c4d.dirs.resource, 'modules', 'python', 'res')
+    resource = join(__module__.dirs.resource, 'modules', 'python', 'res')
 
   if platform.name == 'win':
     arch = '86' if cxc.target_arch == 'x86' else '64'

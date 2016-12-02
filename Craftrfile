@@ -57,7 +57,7 @@ if not sources:
 sdk, legacy_sdk = load_file('sdk.py').get_frameworks()
 python = load_file('python.py').get_framework()
 
-load_module('lang.cxx.*')
+load_module('craftr.lang.cxx.*')
 mode = 'debug' if options.debug else 'release'
 c4d_sdk_library = cxx_library(
   inputs = cpp_compile(

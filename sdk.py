@@ -13,9 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-cxc = load_module('lang.cxx').cxc
-c4d = session.module.namespace
-dirs = c4d.dirs
+cxc = load_module('craftr.lang.cxx').cxc
+dirs = __module__.dirs
 
 # Gather a list of the C4D include directories.
 include = [
@@ -31,7 +30,7 @@ include = [
   dirs.source + '/c4d_scaling',
   dirs.resource + '/res/description'
 ]
-if c4d.options.release <= 15:
+if options.release <= 15:
   include += glob([
     dirs.resource + '/modules/*/res/description',
     dirs.c4d + '/modules/*/res/description',
@@ -43,11 +42,11 @@ include = map(path.norm, include)
 
 
 def get_windows_framework():
-  debug = c4d.options.debug
+  debug = options.debug
   arch = 'x64' if '64' in cxc.target_arch else 'x86'
 
   defines = ['__PC']
-  if c4d.options.release >= 15:
+  if options.release >= 15:
     defines += ['MAXON_API', 'MAXON_TARGET_WINDOWS']
     defines += ['MAXON_TARGET_DEBUG'] if debug else ['MAXON_TARGET_RELEASE']
     if arch == 'x64':
@@ -99,11 +98,11 @@ def get_windows_framework():
 
 
 def get_mac_framework():
-  debug = c4d.options.debug
-  stdlib = 'stdc++' if c4d.options.release <= 15 else 'c++'
+  debug = options.debug
+  stdlib = 'stdc++' if options.release <= 15 else 'c++'
 
   defines = ['C4D_COCOA', '__MAC']
-  if c4d.options.release >= 15:
+  if options.release >= 15:
     defines += ['MAXON_API', 'MAXON_TARGET_OSX']
     defines += ['MAXON_TARGET_DEBUG'] if debug else ['MAXON_TARGET_RELEASE']
     defines += ['MAXON_TARGET_64BIT']
@@ -111,7 +110,7 @@ def get_mac_framework():
     defines += ['_DEBUG', 'DEBUG'] if debug else ['NDEBUG']
     defines += ['__C4D_64BIT']
 
-  if c4d.options.release <= 15:
+  if options.release <= 15:
     flags = (
       '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
       '-fmacro-backtrace-limit=0 -Wno-trigraphs '
@@ -148,7 +147,7 @@ def get_mac_framework():
   flags += ['-Wno-unused-private-field']
 
   forced_include = []
-  if c4d.options.release <= 15:
+  if options.release <= 15:
     if debug:
       forced_include = [join(source_dir, 'ge_mac_debug_flags.h')]
     else:
@@ -182,7 +181,7 @@ def get_frameworks():
     frameworks = [c4d_sdk],
     defines = ['__LEGACY_API']
   )
-  if c4d.options.release >= 17:
+  if options.release >= 17:
     c4d_legacy_sdk['include'] = [local('fix')]
     c4d_legacy_sdk['forced_include'] = ['legacy.h']
   return c4d_sdk, c4d_legacy_sdk

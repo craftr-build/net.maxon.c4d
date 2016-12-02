@@ -1,15 +1,13 @@
 {
-  "name": "lib.cxx.maxon.c4d",
-  "version": "1.0.0",
-  "author": "",
-  "url": "",
+  "name": "NiklasRosenstein.maxon.c4d",
+  "version": "1.0.1",
+  "author": "Niklas Rosenstein <rosensteinniklas@gmail.com>",
+  "url": "https://github.com/craftr-build/NiklasRosenstein.maxon.c4d",
   "dependencies": {
-    "lang.cxx": "*"
+    "craftr.lang.cxx": "*"
   },
   "options": {
-    "debug": {
-      "type": "bool"
-    },
+    "debug": "bool",
     "rtti": {
       "type": "bool",
       "help": "Whether to use RTTI, disabled by default.",
@@ -23,6 +21,5 @@
       "type": "string",
       "help": "The Cinema 4D release version number. By default, it is derived from the c4d_path."
     }
-  },
-  "loaders": []
+  }
 }

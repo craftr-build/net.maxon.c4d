@@ -33,15 +33,30 @@ def get_c4d_path_and_release():
     error('C4D installation path could not be determined')
   return match.groups()
 
-if not options.c4d_path:
-  options.c4d_path = get_c4d_path_and_release()[0]
-if not options.release:
-  options.release = get_c4d_path_and_release()[1]
-options.release = int(options.release)
+# If either the version or url options are specified, we download the
+# Cinema 4D SDK instead of assuming that we can derive it from the path
+# of the currently executed package.
+if options.version or options.url:
+  if not options.url:
+    options.url = "https://public.niklasrosenstein.com/cinema4dsdk/c4dsdk-${VERSION}.tar.gz"
+  if options.version:
+    options.url = options.url.replace('${VERSION}', options.version)
+  elif '${VERSION}' in options.url:
+    error('found ${VERSION} variable in .url option, but .version option is not set')
+
+  options.directory = external_archive(options.url)
+  if not options.release:
+    options.release = int(float(options.version))
+elif not options.directory:
+  options.directory = get_c4d_path_and_release()[0]
+  if not options.version:
+    options.release = int(get_c4d_path_and_release()[1])
+
+logger.info('Maxon Cinema 4D SDK R{}'.format(options.version or options.release))
 
 # Find important directories in the C4D installation.
 dirs = Namespace()
-dirs.c4d = options.c4d_path
+dirs.c4d = options.directory
 dirs.resource = path.join(dirs.c4d, 'resource')
 if options.release <= 15:
   dirs.source = path.join(dirs.resource, '_api')
@@ -57,16 +72,18 @@ if not sources:
 sdk, legacy_sdk = load_file('sdk.py').get_frameworks()
 python = load_file('python.py').get_framework()
 
-load_module('craftr.lang.cxx.*')
+cxx = load('craftr.lang.cxx')
 mode = 'debug' if options.debug else 'release'
-c4d_sdk_library = cxx_library(
-  inputs = cpp_compile(
+c4d_sdk_library = cxx.library(
+  link_style = 'static',
+  output = 'cinema4d-{}-{}'.format(mode, cxx.cxc.target_arch),
+  inputs = cxx.cpp_compile(
     sources = sources,
+    source_directory = dirs.source,
     frameworks = [sdk]
-  ),
-  output = 'cinema4d-{}-{}'.format(mode, cxc.target_arch)
+  )
 )
-cxx_extend_framework(sdk, c4d_sdk_library)
+cxx.extend_framework(sdk, c4d_sdk_library)
 
 # Export the C4D release into the global namespace to make it easier to
 # retrieve from other modules.

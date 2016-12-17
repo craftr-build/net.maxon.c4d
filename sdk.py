@@ -31,15 +31,12 @@ include = [
   dirs.resource + '/res/description'
 ]
 if options.release <= 15:
-  include += glob([
-    dirs.resource + '/modules/*/res/description',
-    dirs.c4d + '/modules/*/res/description',
-    dirs.c4d + '/modules/*/*/res/description'
-  ])
+  include += glob(['modules/*/res/description'], parent = dirs.resource)
+  include += glob(['modules/*/res/description'], parent = dirs.c4d)
+  include += glob(['modules/*/*/res/description'], parent = dirs.c4d)
 else:
-  include += glob([dirs.resource + '/modules/*/description'])
+  include += glob(['modules/*/description'], parent = dirs.resource)
 include = map(path.norm, include)
-
 
 def get_windows_framework():
   debug = options.debug

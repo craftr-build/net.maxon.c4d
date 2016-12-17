@@ -94,6 +94,16 @@ environment:
     VSVERSION: 140
     VSTARGET: amd64
 
+  # Cinema 4D R16.050
+  # =================
+  - C4DVERSION: 16.050
+    VSVERSION: 120
+    VSTARGET: amd64
+
+  - C4DVERSION: 16.050
+    VSVERSION: 140
+    VSTARGET: amd64
+
   # Cinema 4D R17.048
   # =================
   - C4DVERSION: 17.048

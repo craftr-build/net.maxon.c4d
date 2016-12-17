@@ -54,7 +54,11 @@ plugin = cxx.library(
 )
 ```
 
-## FAW
+__Known Issues__:
+
+- Building R15.064, R16.021, R16.050 with **Visual Studio 2015** <sub>v140</sub> fails
+
+## FAQ
 
 __Why `NiklasRosenstein.maxon.c4d`?__
 

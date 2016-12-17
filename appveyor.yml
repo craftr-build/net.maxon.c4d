@@ -18,6 +18,12 @@ install:
 
 build: off
 
+matrix:
+  allow_failures:
+  # We add this environment variable to all combinations which we know
+  # to fail.
+  - ALLOW_FAILURE: yes
+
 environment:
   matrix:
   # Cinema 4D R12.032
@@ -83,6 +89,7 @@ environment:
   - C4DVERSION: 15.064
     VSVERSION: 140
     VSTARGET: amd64
+    ALLOW_FAILURE: yes
 
   # Cinema 4D R16.021
   # =================
@@ -93,6 +100,7 @@ environment:
   - C4DVERSION: 16.021
     VSVERSION: 140
     VSTARGET: amd64
+    ALLOW_FAILURE: yes
 
   # Cinema 4D R16.050
   # =================
@@ -103,6 +111,7 @@ environment:
   - C4DVERSION: 16.050
     VSVERSION: 140
     VSTARGET: amd64
+    ALLOW_FAILURE: yes
 
   # Cinema 4D R17.048
   # =================

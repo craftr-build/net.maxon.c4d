@@ -1,0 +1,115 @@
+install:
+  # Install wget (the Python version).
+  - C:\Python35\Scripts\pip install wget
+
+  # Download Ninja, unpack it and add it to PATH.
+  - mkdir C:\projects\ninja && cd C:\projects\ninja
+  - C:\Python35\python -m wget https://github.com/ninja-build/ninja/releases/download/v1.7.2/ninja-win.zip
+  - 7z e ninja-win.zip
+  - set PATH=%PATH%;C:\projects\ninja
+
+  # Install latest development version of Craftr.
+  - C:\Python35\Scripts\pip install git+https://github.com/craftr-build/craftr.git@development
+
+  # Go back to repository directory and build.
+  - cd C:\projects\niklasrosenstein-maxon-c4d
+  - C:\Python35\Scripts\craftr export -d .c4d_path=C:\projects\c4dsdk\c4dsdk-%C4DVERSION% -d .version=%C4DVERSION% -d toolkit=msvc-%VSVERSION% -d target=%VSTARGET%
+  - C:\Python35\Scripts\craftr build
+
+build: off
+
+environment:
+  matrix:
+  # Cinema 4D R12.032
+  # =================
+  - C4DVERSION: 12.032
+    VSVERSION: 120
+    VSTARGET: x86
+
+  - C4DVERSION: 12.032
+    VSVERSION: 120
+    VSTARGET: amd64
+
+  - C4DVERSION: 12.032
+    VSVERSION: 140
+    VSTARGET: x86
+
+  - C4DVERSION: 12.032
+    VSVERSION: 140
+    VSTARGET: amd64
+
+  # Cinema 4D R13.051
+  # =================
+  - C4DVERSION: 13.051
+    VSVERSION: 120
+    VSTARGET: x86
+
+  - C4DVERSION: 13.051
+    VSVERSION: 120
+    VSTARGET: amd64
+
+  - C4DVERSION: 13.051
+    VSVERSION: 140
+    VSTARGET: x86
+
+  - C4DVERSION: 13.051
+    VSVERSION: 140
+    VSTARGET: amd64
+
+  # Cinema 4D R14.041
+  # =================
+  - C4DVERSION: 14.041
+    VSVERSION: 120
+    VSTARGET: x86
+
+  - C4DVERSION: 14.041
+    VSVERSION: 120
+    VSTARGET: amd64
+
+  - C4DVERSION: 14.041
+    VSVERSION: 140
+    VSTARGET: x86
+
+  - C4DVERSION: 14.041
+    VSVERSION: 140
+    VSTARGET: amd64
+
+  # Cinema 4D R15.064
+  # =================
+  - C4DVERSION: 15.064
+    VSVERSION: 120
+    VSTARGET: amd64
+
+  - C4DVERSION: 15.064
+    VSVERSION: 140
+    VSTARGET: amd64
+
+  # Cinema 4D R16.021
+  # =================
+  - C4DVERSION: 16.021
+    VSVERSION: 120
+    VSTARGET: amd64
+
+  - C4DVERSION: 16.021
+    VSVERSION: 140
+    VSTARGET: amd64
+
+  # Cinema 4D R17.048
+  # =================
+  - C4DVERSION: 17.048
+    VSVERSION: 120
+    VSTARGET: amd64
+
+  - C4DVERSION: 17.048
+    VSVERSION: 140
+    VSTARGET: amd64
+
+  # Cinema 4D R18.030
+  # =================
+  - C4DVERSION: 18.030
+    VSVERSION: 120
+    VSTARGET: amd64
+
+  - C4DVERSION: 18.030
+    VSVERSION: 140
+    VSTARGET: amd64

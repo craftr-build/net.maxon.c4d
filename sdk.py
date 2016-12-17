@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-cxc = load_module('craftr.lang.cxx').cxc
+cxc = load('craftr.lang.cxx').cxc
 dirs = __module__.dirs
 
 # Gather a list of the C4D include directories.

@@ -9,12 +9,34 @@
 __Features__:
 
 - Provides `__LEGACY_API` functionality for R17+ (just use `c4d.legacy_sdk`
-  instead of `c4d.sdk`)
+  instead of `c4d.sdk`).
 - Provides a header `c4d_Python.h` that conveniently includes `Python.h`
-  which is not straight forward
-- Supports compilation with MSVC, Clang-CL and Clang (Mac OS only)
+  which is not straight forward.
+- Supports compilation with MSVC, Clang-CL and Clang (Mac OS only).
 - Automatically download the Cinema 4D SDK source when compiling outside
-  of a Cinema 4D installation environment
+  of a Cinema 4D installation environment.
+
+__Configuration__:
+
+- `.debug` &ndash; Inheritable option. Specifies whether the Cinema 4D SDK
+  is built in debug mode and with debug symbols. Note that this enables some
+  C4D SDK specific debug features, but the C++ toolkit's the `debug` option
+  should be enabled as well. Thus, it is always a good idea to set the `debug`
+  option globally.
+- `.rtti` &ndash; By default the Cinema 4D SDK compiles with RTTI, thus the
+  default value for this option is `false`. Note that this option will be
+  set globally if no explicit global value is present in the Craftrfile.
+- `.directory` &ndash; The directory of the Cinema 4D installation. If this
+  option is not set, it will be automatically determined from the path of this
+  Craftr package (TODO: Use the path of the MAIN Craftr package instead).
+- `.release` &ndash; The Cinema 4D release to compile for. If not specified,
+  the script will attempt to automatically determine the number of the
+  `.directory` or `.version` options.
+- `.version` &ndash; If specified, instead of using the `.directory` option,
+  the Cinema 4D SDK will be downloaded from the URL specified with the `.url`
+  option.
+- `.url` &ndash; The URL to download the Cinema 4D SDK source from. The default
+  value for this option is `https://public.niklasrosenstein.com/cinema4dsdk/c4dsdk-${VERSION}.tar.gz`.
 
 __Example__:
 
@@ -41,13 +63,3 @@ Craftr requires packages to be namespaced.
 __Will MinGW be supported anytime soon?__
 
 It is planned for the future.
-
-__How do I compile outside of a Cinema 4D installation environment?__
-
-By specifying either or both of the `.version` and `.url` options, the C4D
-SDK source code will be downloaded form the URL. The default URL is
-`https://public.niklasrosenstein.com/cinema4dsdk/c4dsdk-${VERSION}.tar.gz`.
-Available version numbers are for example `12.032`, `15.064` or `17.048`.
-Check out the [repository] for a list of all available versions.
-
-[repository]: https://public.niklasrosenstein.com/cinema4dsdk/

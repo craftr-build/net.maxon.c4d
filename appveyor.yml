@@ -13,15 +13,14 @@ install:
 
   # Go back to repository directory and build.
   - cd C:\projects\niklasrosenstein-maxon-c4d
-  - C:\Python35\Scripts\craftr export -d .c4d_path=C:\projects\c4dsdk\c4dsdk-%C4DVERSION% -d .version=%C4DVERSION% -d toolkit=msvc-%VSVERSION% -d target=%VSTARGET%
+  - C:\Python35\Scripts\craftr export -d .version=%C4DVERSION% -d toolkit=msvc-%VSVERSION% -d target=%VSTARGET%
   - C:\Python35\Scripts\craftr build
 
 build: off
 
 matrix:
   allow_failures:
-  # We add this environment variable to all combinations which we know
-  # to fail.
+  # We add this environment variable to all combinations which we know to fail.
   - ALLOW_FAILURE: yes
 
 environment:

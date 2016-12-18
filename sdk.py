@@ -146,9 +146,9 @@ def get_mac_framework():
   forced_include = []
   if options.release <= 15:
     if debug:
-      forced_include = [join(source_dir, 'ge_mac_debug_flags.h')]
+      forced_include = [path.join(dirs.source, 'ge_mac_debug_flags.h')]
     else:
-      forced_include = [join(source_dir, 'ge_mac_flags.h')]
+      forced_include = [path.join(dirs.source, 'ge_mac_flags.h')]
 
   def prepare_compile(compiler, builder):
     builder.setdefault('cpp_stdlib', stdlib)

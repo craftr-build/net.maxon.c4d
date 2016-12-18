@@ -1,5 +1,6 @@
 # Maxon Cinema 4D SDK (`NiklasRosenstein.maxon.c4d`)
 
+[![Build Status](https://travis-ci.org/craftr-build/NiklasRosenstein.maxon.c4d.svg?branch=master)](https://travis-ci.org/craftr-build/NiklasRosenstein.maxon.c4d)
 [![Build status](https://ci.appveyor.com/api/projects/status/sls9x3ic6nc1gosw/branch/master?svg=true)](https://ci.appveyor.com/project/NiklasRosenstein/niklasrosenstein-maxon-c4d/branch/master)
 
 -- Compile the Cinema 4D SDK and plugins with [Craftr].
@@ -57,6 +58,8 @@ plugin = cxx.library(
 __Known Issues__:
 
 - Building R15.064, R16.021, R16.050 with **Visual Studio 2015** <sub>v140</sub> fails
+- Building R12.032, R13.051, R14.041 fail to build on **Travis CI** because they
+  require XCode 5 but XCode 6.4 is the oldest version supported on Travis CI
 
 ## FAQ
 

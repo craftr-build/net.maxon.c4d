@@ -27,7 +27,7 @@ if platform.name not in ('win', 'mac'):
 
 @functools.lru_cache()
 def get_c4d_path_and_release():
-  path = (options.c4d_path or __file__) + '/'
+  path = (options.directory or __file__) + '/'
   match = re.search(r'(.*Cinema\s+4D\s+R(\d+).*?[/\\])', path, re.I)
   if not match:
     error('C4D installation path could not be determined')

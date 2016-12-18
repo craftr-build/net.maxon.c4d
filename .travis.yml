@@ -14,7 +14,9 @@ env:
 
 matrix:
   allow_failures:
-    - env: ALLOW_FAILURE=yes
+    - env: C4DVERSION=12.032 ALLOW_FAILURE=yes
+    - env: C4DVERSION=13.051 ALLOW_FAILURE=yes
+    - env: C4DVERSION=14.041 ALLOW_FAILURE=yes
 
 install:
   # Install Python3

@@ -1,25 +1,20 @@
 language: cpp
 os: osx
+osx_image: xcode7.3
+
+env:
+  - C4DVERSION=12.032 ALLOW_FAILURE=yes
+  - C4DVERSION=13.051 ALLOW_FAILURE=yes
+  - C4DVERSION=14.041 ALLOW_FAILURE=yes
+  - C4DVERSION=15.064
+  - C4DVERSION=16.021
+  - C4DVERSION=16.050
+  - C4DVERSION=17.048
+  - C4DVERSION=18.030
+
 matrix:
   allow_failures:
     - env: ALLOW_FAILURE=yes
-  include:
-    - env: C4DVERSION=12.032 ALLOW_FAILURE=yes
-      osx_image: xcode6.4
-    - env: C4DVERSION=13.051 ALLOW_FAILURE=yes
-      osx_image: xcode6.4
-    - env: C4DVERSION=14.041 ALLOW_FAILURE=yes
-      osx_image: xcode6.4
-    - env: C4DVERSION=15.064
-      osx_image: xcode7.3
-    - env: C4DVERSION=16.021
-      osx_image: xcode7.3
-    - env: C4DVERSION=16.050
-      osx_image: xcode7.3
-    - env: C4DVERSION=17.048
-      osx_image: xcode7.3
-    - env: C4DVERSION=18.030
-      osx_image: xcode7.3
 
 install:
   # Install Python3

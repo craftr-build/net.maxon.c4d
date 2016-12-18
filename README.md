@@ -39,6 +39,19 @@ __Configuration__:
 - `.url` &ndash; The URL to download the Cinema 4D SDK source from. The default
   value for this option is `https://public.niklasrosenstein.com/cinema4dsdk/c4dsdk-${VERSION}.tar.gz`.
 
+__Version Matrix__:
+
+| Version       | Windows            | OSX               |
+| ------------- | ------------------ | ----------------- |
+| Cinema 4D R18 | Visual Studio 2013 | Apple XCode 7     |
+| Cinema 4D R17 | Visual Studio 2013 | Apple XCode 6     |
+| Cinema 4D R16 | Visual Studio 2012 | Apple XCode 5.0.2 |
+| Cinema 4D R15 | Visual Studio 2012 | Apple XCode 4.6.3 |
+| Cinema 4D R14 | Visual Studio 2010 | Apple XCode 4.3.2 |
+| Cinema 4D R13 | Visual Studio 2005 | Apple XCode 3.2.6 |
+
+> <sub>source: https://developers.maxon.net/?page_id=1108</sub>
+
 __Example__:
 
 ```python

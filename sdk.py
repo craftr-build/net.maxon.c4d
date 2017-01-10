@@ -149,6 +149,9 @@ def get_mac_framework():
       forced_include = [path.join(dirs.source, 'ge_mac_debug_flags.h')]
     else:
       forced_include = [path.join(dirs.source, 'ge_mac_flags.h')]
+    for f in ['__C4D_64BIT', '__MAC']:  # already in flags header
+      try: defines.remove(f)
+      except ValueError: pass
 
   def prepare_compile(compiler, builder):
     builder.setdefault('cpp_stdlib', stdlib)

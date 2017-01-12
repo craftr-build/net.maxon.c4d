@@ -46,7 +46,7 @@ if options.version or options.url:
 
   options.directory = external_archive(options.url)
   if not options.release:
-    options.release = int(float(options.version))
+    options.release = int(float(options.version.split('-', 1)[0]))
 elif not options.directory:
   options.directory = get_c4d_path_and_release()[0]
   if not options.version:

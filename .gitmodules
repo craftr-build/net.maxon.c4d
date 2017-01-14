@@ -1,0 +1,3 @@
+[submodule ".travis/tools"]
+	path = .travis/tools
+	url = https://github.com/NiklasRosenstein/travis-tools.git

@@ -23,6 +23,13 @@ install:
   - mkdir .tmp
   - export PATH=$PATH:$PWD/.tmp
 
+  - .travis/tools/get-ninja v1.7.2 .tmp
+  - if [ ! -z "$XCODE_VERSION" ]; then
+      .travis/tools/get-xcode-cltools $XCODE_VERSION xcode5;
+      export CC=$PWD/xcode5/usr/bin/clang;
+      export CXX=$PWD/xcode5/usr/bin/clang++;
+    fi
+
   # Apparently we need this on OSX because otherwise we can run into the error:
   #     /Users/travis/build.sh: line 109: shell_session_update: command not found
   # See travis-ci#6307
@@ -35,26 +42,6 @@ install:
 
   # Install the latest version of Craftr 2.x.
   - sudo pip3 install git+https://github.com/craftr-build/craftr.git@development
-
-  # Download Ninja.
-  - curl -L https://github.com/ninja-build/ninja/releases/download/v1.7.2/ninja-mac.zip -o .tmp/ninja-linux.zip
-  - unzip .tmp/ninja-linux.zip -d .tmp; rm .tmp/ninja-linux.zip
-
-  # If XCODE_VERSION is set, download the XCode Version and unpack it.
-  # For that, we need xcode-cltools-installer and then update CC/CXX
-  # environment variables so Craftr uses the right compiler.
-  # TODO: Any way to use the bash 'source' command in Travis so that we can
-  #  source the 'activate' script of the unpacked CLTools?
-  - if [ ! -z ${XCODE_VERSION} ]; then
-      set -e;
-      FILENAME=xcode${XCODE_VERSION};
-      git clone https://github.com/NiklasRosenstein/xcode-cltools-installer.git;
-      curl -L https://public.niklasrosenstein.com/xcode-cltools/$FILENAME.dmg -o $FILENAME.dmg;
-      sudo python xcode-cltools-installer/install $FILENAME.dmg .tmp/$FILENAME;
-      rm $FILENAME.dmg;
-      export CC=$PWD/.tmp/$FILENAME/usr/bin/clang;
-      export CXX=$PWD/.tmp/$FILENAME/usr/bin/clang++;
-    fi
 
 script:
   - craftr export -d .version=$C4DVERSION

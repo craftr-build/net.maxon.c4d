@@ -3,34 +3,58 @@ os: osx
 osx_image: xcode7.3
 
 env:
-  - C4DVERSION=12.032 ALLOW_FAILURE=yes
-  - C4DVERSION=13.051 ALLOW_FAILURE=yes
-  - C4DVERSION=14.041 ALLOW_FAILURE=yes
+  # These versions require a version of XCode that is no longer
+  # supported by Travis CI.
+  - C4DVERSION=12.032 XCODE_VERSION=5.0-10.08-2013.09.18
+  - C4DVERSION=13.051 XCODE_VERSION=5.0-10.08-2013.09.18
+  - C4DVERSION=14.041 XCODE_VERSION=5.0-10.08-2013.09.18
+  # These fixed versions compile with LLVM 6+ (so, including 7.3).
+  - C4DVERSION=12.032-llvm6fix
+  - C4DVERSION=13.051-llvm6fix
+  - C4DVERSION=14.041-llvm6fix
+  # These we can compile with XCode 7.3.
   - C4DVERSION=15.064
   - C4DVERSION=16.021
   - C4DVERSION=16.050
   - C4DVERSION=17.048
   - C4DVERSION=18.030
 
-matrix:
-  allow_failures:
-    - env: C4DVERSION=12.032 ALLOW_FAILURE=yes
-    - env: C4DVERSION=13.051 ALLOW_FAILURE=yes
-    - env: C4DVERSION=14.041 ALLOW_FAILURE=yes
-
 install:
-  # Install Python3
+  - mkdir .tmp
+  - export PATH=$PATH:$PWD/.tmp
+
+  # Apparently we need this on OSX because otherwise we can run into the error:
+  #     /Users/travis/build.sh: line 109: shell_session_update: command not found
+  # See travis-ci#6307
+  - rvm get stable
+
+  # Install Python3 with Homebrew and then Pip.
   - brew update
   - brew install python3
-  # Install pip
   - curl -s https://bootstrap.pypa.io/get-pip.py | sudo python3
-  # Install the latest development version of Craftr 2.x
-  - sudo pip3 install git+https://github.com/craftr-build/craftr.git@development
-  # Install the Ninja binary to .tmp/
-  - mkdir .tmp
+
+  # Install the latest version of Craftr 2.x.
+  - sudo pip3 install git+https://github.com/craftr-build/craftr.git
+
+  # Download Ninja.
   - curl -L https://github.com/ninja-build/ninja/releases/download/v1.7.2/ninja-mac.zip -o .tmp/ninja-linux.zip
-  - unzip .tmp/ninja-linux.zip -d .tmp
-  - export PATH=$PATH:$PWD/.tmp
+  - unzip .tmp/ninja-linux.zip -d .tmp; rm .tmp/ninja-linux.zip
+
+  # If XCODE_VERSION is set, download the XCode Version and unpack it.
+  # For that, we need xcode-cltools-installer and then update CC/CXX
+  # environment variables so Craftr uses the right compiler.
+  # TODO: Any way to use the bash 'source' command in Travis so that we can
+  #  source the 'activate' script of the unpacked CLTools?
+  - if [ ! -z ${XCODE_VERSION} ]; then
+      set -e;
+      FILENAME=xcode${XCODE_VERSION};
+      git clone https://github.com/NiklasRosenstein/xcode-cltools-installer.git;
+      curl -L https://public.niklasrosenstein.com/xcode-cltools/$FILENAME.dmg -o $FILENAME.dmg;
+      sudo python xcode-cltools-installer/install $FILENAME.dmg .tmp/$FILENAME;
+      rm $FILENAME;
+      export CC=$PWD/.tmp/$FILENAME/usr/bin/clang;
+      export CXX=$PWD/.tmp/$FILENAME/usr/bin/clang++;
+    fi
 
 script:
   - craftr export -d .version=$C4DVERSION

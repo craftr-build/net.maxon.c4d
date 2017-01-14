@@ -35,7 +35,8 @@ __Configuration__:
   `.directory` or `.version` options.
 - `.version` &ndash; If specified, instead of using the `.directory` option,
   the Cinema 4D SDK will be downloaded from the URL specified with the `.url`
-  option.
+  option. Check https://public.niklasrosenstein.com/cinema4dsdk/ for available
+  versions if you keep the `.url` default value.
 - `.url` &ndash; The URL to download the Cinema 4D SDK source from. The default
   value for this option is `https://public.niklasrosenstein.com/cinema4dsdk/c4dsdk-${VERSION}.tar.gz`.
 
@@ -71,8 +72,6 @@ plugin = cxx.library(
 __Known Issues__:
 
 - Building R15.064, R16.021, R16.050 with **Visual Studio 2015** <sub>v140</sub> fails
-- Building R12.032, R13.051, R14.041 fail to build on **Travis CI** because they
-  require XCode 5 but XCode 6.4 is the oldest version supported on Travis CI
 
 ## FAQ
 

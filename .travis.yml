@@ -34,7 +34,7 @@ install:
   - curl -s https://bootstrap.pypa.io/get-pip.py | sudo python3
 
   # Install the latest version of Craftr 2.x.
-  - sudo pip3 install git+https://github.com/craftr-build/craftr.git
+  - sudo pip3 install git+https://github.com/craftr-build/craftr.git@development
 
   # Download Ninja.
   - curl -L https://github.com/ninja-build/ninja/releases/download/v1.7.2/ninja-mac.zip -o .tmp/ninja-linux.zip
@@ -51,7 +51,7 @@ install:
       git clone https://github.com/NiklasRosenstein/xcode-cltools-installer.git;
       curl -L https://public.niklasrosenstein.com/xcode-cltools/$FILENAME.dmg -o $FILENAME.dmg;
       sudo python xcode-cltools-installer/install $FILENAME.dmg .tmp/$FILENAME;
-      rm $FILENAME;
+      rm $FILENAME.dmg;
       export CC=$PWD/.tmp/$FILENAME/usr/bin/clang;
       export CXX=$PWD/.tmp/$FILENAME/usr/bin/clang++;
     fi

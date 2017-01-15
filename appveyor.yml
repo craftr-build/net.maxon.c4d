@@ -1,12 +1,12 @@
 install:
+  - mkdir C:\Bin
+  - set PATH=C:\Bin;%PATH%
+
   # Install wget (the Python version).
   - C:\Python35\Scripts\pip install wget
 
   # Download Ninja, unpack it and add it to PATH.
-  - mkdir C:\projects\ninja && cd C:\projects\ninja
-  - C:\Python35\python -m wget https://github.com/ninja-build/ninja/releases/download/v1.7.2/ninja-win.zip
-  - 7z e ninja-win.zip
-  - set PATH=%PATH%;C:\projects\ninja
+  - .ci\tools\get-ninja.cmd v1.7.2 C:\bin
 
   # Install latest development version of Craftr.
   - C:\Python35\Scripts\pip install git+https://github.com/craftr-build/craftr.git@development

@@ -23,9 +23,9 @@ install:
   - mkdir .tmp
   - export PATH=$PATH:$PWD/.tmp
 
-  - .travis/tools/get-ninja v1.7.2 .tmp
+  - .ci/tools/get-ninja v1.7.2 .tmp
   - if [ ! -z "$XCODE_VERSION" ]; then
-      .travis/tools/get-xcode-cltools $XCODE_VERSION xcode5;
+      .ci/tools/get-xcode-cltools $XCODE_VERSION xcode5;
       export CC=$PWD/xcode5/usr/bin/clang;
       export CXX=$PWD/xcode5/usr/bin/clang++;
     fi

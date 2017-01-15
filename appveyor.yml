@@ -1,6 +1,7 @@
 install:
   - mkdir C:\Bin
   - set PATH=C:\Bin;%PATH%
+  - git submodule update --init
 
   # Install wget (the Python version).
   - C:\Python35\Scripts\pip install wget

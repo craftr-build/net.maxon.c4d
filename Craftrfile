@@ -22,7 +22,7 @@ import re
 session.options.setdefault('rtti', options.rtti)
 
 # Derive default option values and validat them.
-if platform.name not in ('win', 'mac'):
+if platform.name not in ('win', 'mac', 'linux'):
   error('unsupported platform: {!r}'.format(platform.name))
 
 @functools.lru_cache()

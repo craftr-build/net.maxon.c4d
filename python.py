@@ -62,5 +62,7 @@ def get_framework():
       include = [include, local('fix/python_api')],
       external_libs = [lib_full_path],
     )
+  elif platform.name == 'linux':
+    return None
   else:
     assert False

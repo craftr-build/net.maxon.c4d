@@ -94,13 +94,24 @@ def get_windows_framework():
   )
 
 
-def get_mac_framework():
+def get_mac_or_linux_framework():
   debug = options.debug
   stdlib = 'stdc++' if options.release <= 15 else 'c++'
 
-  defines = ['C4D_COCOA', '__MAC']
+  defines = []
+  if platform.name == 'mac':
+    defines += ['C4D_COCOA', '__MAC']
+    if options.release >= 15:
+      defines += ['MAXON_TARGET_OSX']
+  elif platform.name == 'linux':
+    defines += ['__LINUX']
+    if options.release >= 15:
+      defines += ['MAXON_TARGET_LINUX']
+  else:
+    assert False
+
   if options.release >= 15:
-    defines += ['MAXON_API', 'MAXON_TARGET_OSX']
+    defines += ['MAXON_API']
     defines += ['MAXON_TARGET_DEBUG'] if debug else ['MAXON_TARGET_RELEASE']
     defines += ['MAXON_TARGET_64BIT']
   else:
@@ -108,43 +119,46 @@ def get_mac_framework():
     defines += ['__C4D_64BIT']
 
   if options.release <= 15:
-    flags = (
-      '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
-      '-fmacro-backtrace-limit=0 -Wno-trigraphs '
-      '-fpascal-strings -Wno-missing-field-initializers -Wno-missing-prototypes '
-      '-Wno-non-virtual-dtor -Woverloaded-virtual -Wno-exit-time-destructors '
-      '-Wmissing-braces -Wparentheses -Wno-switch -Wunused-function '
-      '-Wunused-label -Wno-unused-parameter -Wunused-variable -Wunused-value '
-      '-Wno-empty-body -Wno-uninitialized -Wunknown-pragmas -Wno-shadow '
-      '-Wno-four-char-constants -Wno-conversion -Wno-constant-conversion '
-      '-Wno-int-conversion -Wno-bool-conversion -Wno-enum-conversion '
-      '-Wno-shorten-64-to-32 -Wno-newline-eof -Wno-c++11-extensions '
-      '-fasm-blocks -fstrict-aliasing -Wdeprecated-declarations '
-      '-Wno-invalid-offsetof -mmacosx-version-min=10.6 -msse3 '
-      '-fvisibility=hidden -fvisibility-inlines-hidden -Wno-sign-conversion '
-      '-Wno-logical-op-parentheses -fno-math-errno').split()
+    flags = shell.split('''
+      -fmessage-length=0 -Wno-trigraphs -Wno-missing-field-initializers
+      -Wno-non-virtual-dtor -Woverloaded-virtual -Wmissing-braces -Wparentheses
+      -Wno-switch -Wunused-function -Wunused-label -Wno-unused-parameter
+      -Wunused-variable -Wunused-value -Wno-empty-body -Wno-uninitialized
+      -Wunknown-pragmas -Wno-shadow -Wno-conversion -fstrict-aliasing
+      -Wdeprecated-declarations -Wno-invalid-offsetof -msse3 -fvisibility=hidden
+      -fvisibility-inlines-hidden -Wno-sign-conversion -fno-math-errno''')
+    if platform.name == 'mac':
+      flags += shell.split('''
+        -mmacosx-version-min=10.6 -Wno-int-conversion -Wno-logical-op-parentheses
+        -Wno-shorten-64-to-32 -Wno-enum-conversion -Wno-bool-conversion
+        -Wno-constant-conversion''')
   else:
-    flags = (
-      '-fmessage-length=0 -fdiagnostics-show-note-include-stack '
-      '-fmacro-backtrace-limit=0 -Wno-trigraphs '
-      '-fpascal-strings -Wmissing-field-initializers '
-      '-Wno-missing-prototypes -Wno-non-virtual-dtor '
-      '-Woverloaded-virtual -Wno-exit-time-destructors -Wmissing-braces '
-      '-Wparentheses -Wno-switch -Wunused-function -Wunused-label '
-      '-Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body '
-      '-Wuninitialized -Wunknown-pragmas -Wshadow -Wno-four-char-constants '
-      '-Wno-conversion -Wconstant-conversion -Wint-conversion '
-      '-Wbool-conversion -Wenum-conversion -Wsign-compare -Wshorten-64-to-32 '
-      '-Wno-newline-eof -Wno-c++11-extensions -fasm-blocks -fstrict-aliasing '
-      '-Wdeprecated-declarations -Winvalid-offsetof -mmacosx-version-min=10.7 '
-      '-msse3 -fvisibility=hidden -fvisibility-inlines-hidden '
-      '-Wno-sign-conversion -fno-math-errno').split()
+    flags = shell.split('''
+      -fmessage-length=0 -Wno-trigraphs -Wmissing-field-initializers
+      -Wno-non-virtual-dtor -Woverloaded-virtual -Wmissing-braces -Wparentheses
+      -Wno-switch -Wunused-function -Wunused-label -Wno-unused-parameter
+      -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized
+      -Wunknown-pragmas -Wshadow -Wno-conversion -Wsign-compare -fstrict-aliasing
+      -Wdeprecated-declarations -Winvalid-offsetof -msse3 -fvisibility=hidden
+      -fvisibility-inlines-hidden -Wno-sign-conversion -fno-math-errno''')
+    if platform.name == 'mac':
+      flags += shell.split('''
+        -mmacosx-version-min=10.7 -Wconstant-conversion -Wbool-conversion
+        -Wenum-conversion -Wshorten-64-to-32 -Wint-conversion''')
 
-  # These flags are not usually set in the C4D SDK.
-  flags += ['-Wno-unused-private-field']
+  if platform.name == 'mac':
+    flags += shell.split('''
+      -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0
+      -fpascal-strings -fasm-blocks -Wno-c++11-extensions -Wno-newline-eof
+      -Wno-four-char-constants -Wno-exit-time-destructors
+      -Wno-missing-prototypes''')
+    # These flags are not usually set in the C4D SDK.
+    flags += ['-Wno-unused-private-field']
+  elif platform.name == 'linux':
+    flags += ['-Wno-multichar', '-Wno-strict-aliasing', '-Wno-shadow']
 
   forced_include = []
-  if options.release <= 15:
+  if platform.name == 'mac' and options.release <= 15:
     if debug:
       forced_include = [path.join(dirs.source, 'ge_mac_debug_flags.h')]
     else:
@@ -173,8 +187,8 @@ def get_mac_framework():
 def get_frameworks():
   if platform.name == 'win':
     c4d_sdk = get_windows_framework()
-  elif platform.name == 'mac':
-    c4d_sdk = get_mac_framework()
+  elif platform.name in ('mac', 'linux'):
+    c4d_sdk = get_mac_or_linux_framework()
   else:
     assert False
   c4d_legacy_sdk = Framework('maxon.c4d_legacy_sdk',

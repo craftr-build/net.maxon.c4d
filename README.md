@@ -16,6 +16,7 @@ __Features__:
 - Supports compilation with MSVC, Clang-CL and Clang (Mac OS only).
 - Automatically download the Cinema 4D SDK source when compiling outside
   of a Cinema 4D installation environment.
+- Support for GCC on Linux (experimental)
 
 __Configuration__:
 

@@ -155,7 +155,8 @@ def get_mac_or_linux_framework():
     # These flags are not usually set in the C4D SDK.
     flags += ['-Wno-unused-private-field']
   elif platform.name == 'linux':
-    flags += ['-Wno-multichar', '-Wno-strict-aliasing', '-Wno-shadow']
+    flags += shell.split('''
+      -Wno-multichar -Wno-strict-aliasing -Wno-shadow -Wno-conversion-null''')
 
   forced_include = []
   if platform.name == 'mac' and options.release <= 15:

@@ -139,7 +139,7 @@ def get_mac_or_linux_framework():
       -Wno-switch -Wunused-function -Wunused-label -Wno-unused-parameter
       -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized
       -Wunknown-pragmas -Wshadow -Wno-conversion -Wsign-compare -fstrict-aliasing
-      -Wdeprecated-declarations -Winvalid-offsetof -msse3 -fvisibility=hidden
+      -Wdeprecated-declarations -Wno-invalid-offsetof -msse3 -fvisibility=hidden
       -fvisibility-inlines-hidden -Wno-sign-conversion -fno-math-errno''')
     if platform.name == 'mac':
       flags += shell.split('''

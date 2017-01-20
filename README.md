@@ -60,13 +60,12 @@ __Example__:
 cxx = load('craftr.lang.cxx')
 c4d = load('NiklasRosenstein.maxon.c4d')
 
-plugin = cxx.library(
-  link_style = 'shared',
-  inputs = cxx.cpp_compile(
-    sources = glob(['src/**/*.cpp']),
+plugin = cxx.shared_library(
+  output = local('myplugin'),
+  inputs = cxx.compile_cpp(
+    sources = glob('src/**/*.cpp'),
     frameworks = [c4d.sdk]
-  ),
-  output = local('myplugin')
+  )
 )
 ```
 

@@ -78,10 +78,9 @@ python = load_file('python.py').get_framework()
 
 cxx = load('craftr.lang.cxx')
 mode = 'debug' if options.debug else 'release'
-c4d_sdk_library = cxx.library(
-  link_style = 'static',
+c4d_sdk_library = cxx.static_library(
   output = 'cinema4d-{}-{}'.format(mode, cxx.cxc.target_arch),
-  inputs = cxx.cpp_compile(
+  inputs = cxx.compile_cpp(
     sources = sources,
     source_directory = dirs.source,
     frameworks = [sdk]

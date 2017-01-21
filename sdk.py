@@ -181,6 +181,7 @@ def get_mac_or_linux_framework():
     include = include,
     exceptions = False,
     forced_include = forced_include,
+    pic = True,
     cxc_compile_prepare_callbacks = [prepare_compile]
   )
 

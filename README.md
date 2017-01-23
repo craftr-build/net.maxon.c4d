@@ -11,7 +11,7 @@ __Features__:
 
 - Provides `__LEGACY_API` functionality for R17+ (just use `c4d.legacy_sdk`
   instead of `c4d.sdk`).
-- Provides a header `c4d_Python.h` that conveniently includes `Python.h`
+- Provides a header `craftr/c4d_python.h` that conveniently includes `Python.h`
   which is not straight forward.
 - Supports compilation with MSVC, Clang-CL and Clang (Mac OS only).
 - Automatically download the Cinema 4D SDK source when compiling outside

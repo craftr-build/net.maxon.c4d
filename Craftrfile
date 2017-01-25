@@ -49,12 +49,11 @@ if options.version or options.url:
     options.release = int(float(options.version.split('-', 1)[0]))
 elif not options.directory:
   options.directory = get_c4d_path_and_release()[0]
-  if not options.version:
-    options.release = int(get_c4d_path_and_release()[1])
-elif options.release:
-  options.release = int(options.release)
+
+if not options.release:
+  options.release = int(get_c4d_path_and_release()[1])
 else:
-  error('C4D release could not be automatically determined')
+  options.release = int(options.release)
 
 logger.info('Maxon Cinema 4D SDK R{}'.format(options.version or options.release))
 

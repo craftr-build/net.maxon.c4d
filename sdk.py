@@ -197,7 +197,5 @@ def get_frameworks():
     frameworks = [c4d_sdk],
     defines = ['__LEGACY_API']
   )
-  if options.release >= 17:
-    c4d_legacy_sdk['include'] = [local('include')]
-    c4d_legacy_sdk['forced_include'] = ['craftr/c4d_legacy.h']
+  c4d_sdk['include'] += [local('include')]
   return c4d_sdk, c4d_legacy_sdk

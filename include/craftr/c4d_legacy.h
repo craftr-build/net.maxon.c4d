@@ -7,8 +7,6 @@
 #ifndef LEGACY_H__
 #define LEGACY_H__
 
-#ifdef __LEGACY_API
-
 #include "c4d.h"
 #include "vector4.h"
 #include "matrix4.h"
@@ -216,7 +214,5 @@ inline Float64 FCut01(Float64 a)	{ return Clamp01(a); }
 #ifdef MAXON_TARGET_64BIT
 	#define __C4D_64BIT
 #endif
-
-#endif // __LEGACY_API
 
 #endif // LEGACY_H__

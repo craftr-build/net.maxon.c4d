@@ -36,9 +36,10 @@ def get_framework():
     lib = 'python' + version.replace('.', '')
     lib_path = join(fw_path, 'libs', 'python' + version.replace('.', ''))
 
-    lib_full_path = join(lib_path, lib + '.lib')
-    if not path.isdir(lib_full_path):
-      lib_full_path = path.dirname(lib_full_path)
+    # Check if the .lib exists in the subdirectory, otherwise the stuff
+    # is directly in the directory above.
+    if not path.isfile(join(lib_path, lib + '.lib')):
+      lib_path = path.dirname(lib_path)
 
     # There are multiple paths where the include directory could be.
     include = join(fw_path, 'include', 'python' + version.replace('.', ''))

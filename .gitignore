@@ -1,4 +1,3 @@
-.ninja_log
-.ninja_deps
-build.ninja
-build/
+.nodepy
+build
+

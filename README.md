@@ -1,6 +1,6 @@
 ## @craftr/maxon-c4d
 
-[![Build Status](https://travis-ci.org/craftr-build/craftr-maxon-c4d.svg?branch=master)](https://travis-ci.org/craftr-build/NiklasRosenstein.maxon.c4d)
+[![Build Status](https://travis-ci.org/craftr-build/craftr-maxon-c4d.svg?branch=master)](https://travis-ci.org/craftr-build/craftr-maxon-c4d)
 [![Build status](https://ci.appveyor.com/api/projects/status/5drmctmptqgdq6cs?svg=true)](https://ci.appveyor.com/project/NiklasRosenstein/craftr-maxon-c4d)
 
   [Craftr]: https://craftr.net

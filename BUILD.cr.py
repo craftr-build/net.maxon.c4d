@@ -164,11 +164,11 @@ elif platform in ('mac', 'linux'):
   stdlib = 'stdc++' if release <= 15 else 'c++'
 
   defines = []
-  if name == 'mac':
+  if platform == 'mac':
     defines += ['C4D_COCOA', '__MAC']
     if release >= 15:
       defines += ['MAXON_TARGET_OSX']
-  elif name == 'linux':
+  elif platform == 'linux':
     defines += ['__LINUX']
     if release >= 15:
       defines += ['MAXON_TARGET_LINUX']

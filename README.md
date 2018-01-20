@@ -1,4 +1,4 @@
-# Maxon Cinema 4D SDK (`craftr-maxon-c4d`)
+## @craftr/maxon-c4d
 
 [![Build Status](https://travis-ci.org/craftr-build/NiklasRosenstein.maxon.c4d.svg?branch=master)](https://travis-ci.org/craftr-build/NiklasRosenstein.maxon.c4d)
 [![Build status](https://ci.appveyor.com/api/projects/status/sls9x3ic6nc1gosw/branch/master?svg=true)](https://ci.appveyor.com/project/NiklasRosenstein/niklasrosenstein-maxon-c4d/branch/master)
@@ -63,13 +63,13 @@ import c4d from 'craftr-maxon-c4d'
 
 cxx.library(
   name = 'plugin',
-  deps = ['//craftr-maxon-c4d:c4d'],
+  deps = ['//@craftr/maxon-c4d:c4d'],
   outname = 'myplugin' + c4d.plugin_ext,
   srcs = craftr.glob('src/**/*.cpp')
 )
 ```
 
-To use the legacy API, use the `//craftr-maxon-c4d:c4d_legacy` target instead.
+To use the legacy API, use the `//@craftr/maxon-c4d:c4d_legacy` target instead.
 
 __Known Issues__:
 

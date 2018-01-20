@@ -67,10 +67,10 @@ install:
 
   # -------------------------------------------------------------------------
 
-  # Install Node.py
-  - $PIP install git+https://github.com/nodepy/nodepy.git@develop
+  # Install Node.py.
+  - $PIP install --user git+https://github.com/nodepy/nodepy.git@develop
   - nodepy --version
-  - nodepy https://nodepy.org/install-pm develop
+  - nodepy https://nodepy.org/install-pm develop -g
   - nodepy-pm --version
   - export PATH="$(nodepy-pm bin):$PATH"
 

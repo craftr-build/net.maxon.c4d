@@ -60,8 +60,8 @@ __Example__:
 
 ```python
 import craftr from 'craftr'
-import cxx from 'craftr/lang/cxx'
-import c4d from 'craftr-maxon-c4d'
+import cxx from '@craftr/cxx'
+import c4d from '@craftr/maxon-c4d'
 
 cxx.library(
   name = 'plugin',

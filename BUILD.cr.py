@@ -141,6 +141,7 @@ if platform == 'win':
     exceptions = False,
     exported_includes = include,
     exported_defines = defines,
+    rtti = rtti,
     options = dict(
       msvc_disable_warnings = (
         '4062 4100 4127 4131 4201 4210 4242 4244 4245 4305 4310 4324 4355 '
@@ -239,6 +240,7 @@ elif platform in ('mac', 'linux'):
     exported_includes = include,
     exported_defines = defines,
     exceptions = False,
+    rtti = rtti,
     std = 'c++11',
     forced_include = forced_include,
   )
@@ -258,7 +260,6 @@ cxx.prebuilt(
   defines = ['__LEGACY_API'],
   forced_includes = [craftr.localpath('include/craftr/c4d_legacy.h')]
 )
-
 
 # ============================================================================
 # Find the Cinema 4D Python SDK.

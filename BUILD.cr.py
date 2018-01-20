@@ -1,9 +1,8 @@
 
-
 import functools
 import re
 import os, sys
-import craftr, {path} from 'craftr'
+import craftr, {path, sh} from 'craftr'
 import cxx from '@craftr/cxx'
 
 if sys.platform.startswith('win32'):
@@ -184,7 +183,7 @@ elif platform in ('mac', 'linux'):
     defines += ['__C4D_64BIT']
 
   if release <= 15:
-    flags = shell.split('''
+    flags = sh.split('''
       -fmessage-length=0 -Wno-trigraphs -Wno-missing-field-initializers
       -Wno-non-virtual-dtor -Woverloaded-virtual -Wmissing-braces -Wparentheses
       -Wno-switch -Wunused-function -Wunused-label -Wno-unused-parameter
@@ -193,12 +192,12 @@ elif platform in ('mac', 'linux'):
       -Wdeprecated-declarations -Wno-invalid-offsetof -msse3 -fvisibility=hidden
       -fvisibility-inlines-hidden -Wno-sign-conversion -fno-math-errno''')
     if platform == 'mac':
-      flags += shell.split('''
+      flags += sh.split('''
         -mmacosx-version-min=10.6 -Wno-int-conversion -Wno-logical-op-parentheses
         -Wno-shorten-64-to-32 -Wno-enum-conversion -Wno-bool-conversion
         -Wno-constant-conversion''')
   else:
-    flags = shell.split('''
+    flags = sh.split('''
       -fmessage-length=0 -Wno-trigraphs -Wmissing-field-initializers
       -Wno-non-virtual-dtor -Woverloaded-virtual -Wmissing-braces -Wparentheses
       -Wno-switch -Wunused-function -Wunused-label -Wno-unused-parameter
@@ -207,12 +206,12 @@ elif platform in ('mac', 'linux'):
       -Wdeprecated-declarations -Wno-invalid-offsetof -msse3 -fvisibility=hidden
       -fvisibility-inlines-hidden -Wno-sign-conversion -fno-math-errno''')
     if platform == 'mac':
-      flags += shell.split('''
+      flags += sh.split('''
         -mmacosx-version-min=10.7 -Wconstant-conversion -Wbool-conversion
         -Wenum-conversion -Wshorten-64-to-32 -Wint-conversion''')
 
   if platform == 'mac':
-    flags += shell.split('''
+    flags += sh.split('''
       -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0
       -fpascal-strings -fasm-blocks -Wno-c++11-extensions -Wno-newline-eof
       -Wno-four-char-constants -Wno-exit-time-destructors
@@ -220,7 +219,7 @@ elif platform in ('mac', 'linux'):
     # These flags are not usually set in the C4D SDK.
     flags += ['-Wno-unused-private-field']
   elif platform == 'linux':
-    flags += shell.split('''
+    flags += sh.split('''
       -Wno-multichar -Wno-strict-aliasing -Wno-shadow -Wno-conversion-null''')
 
   forced_include = []

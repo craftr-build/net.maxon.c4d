@@ -46,6 +46,7 @@ __Version Matrix__:
 
 | Version       | Windows            | OSX               |
 | ------------- | ------------------ | ----------------- |
+| Cinema 4D R19 | Visual Studio 2015 | Apple XCode 8     |
 | Cinema 4D R18 | Visual Studio 2013 | Apple XCode 7     |
 | Cinema 4D R17 | Visual Studio 2013 | Apple XCode 6     |
 | Cinema 4D R16 | Visual Studio 2012 | Apple XCode 5.0.2 |

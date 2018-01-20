@@ -59,15 +59,29 @@ install:
   # Install Pip into that Python version.
   - curl -s https://bootstrap.pypa.io/get-pip.py | sudo $PYTHON
 
-  # Install the latest version of Craftr 2.x.
-  - sudo $PIP install git+https://github.com/craftr-build/craftr.git@development
-
   # Linux: Use the newer version of GCC that we installed with addons:apt:packages
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then
       export CC=gcc-5;
       export CXX=g++-5;
     fi
 
+  # -------------------------------------------------------------------------
+
+  # Install Node.py
+  - $PIP install git+https://github.com/nodepy/nodepy.git@develop
+  - nodepy --version
+  - nodepy https://nodepy.org/install-pm develop
+  - nodepy-pm --version
+  - export PATH="$(nodepy-pm bin):$PATH"
+
+  # Install Craftr.
+  - nodepy-pm install git+https://github.com/craftr-build/craftr.git@master
+  - craftr --version
+
+  # self install.
+  - nodepy-pm install
+
+
 script:
-  - craftr export -d .version=$C4DVERSION
-  - craftr build
+  - craftr --configure --options maxon-c4d.version=$C4DVERSION
+  - craftr --build

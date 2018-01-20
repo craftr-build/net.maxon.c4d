@@ -1,23 +1,28 @@
 install:
-  - mkdir C:\Bin
-  - set PATH=C:\Bin;%PATH%
+  - set PATH=C:\Python36-x64;C:\Python36-x64\Scripts;%PATH%;%ADD_PATH%
+  - pip --version
   - git submodule update --init
 
   # Install wget (the Python version).
-  - C:\Python35\Scripts\pip install wget
+  - pip install wget
 
-  # Download Ninja, unpack it and add it to PATH.
-  - .ci\tools\get-ninja.cmd v1.7.2 C:\bin
+  # Install Node.py
+  - pip install wheel
+  - pip install git+https://github.com/nodepy/nodepy.git@develop
+  - nodepy --version
+  - nodepy https://nodepy.org/install-pm develop
+  - nodepy-pm --version
+  - set PATH=.nodepy\bin;%PATH%
 
-  # Install latest development version of Craftr.
-  - C:\Python35\Scripts\pip install git+https://github.com/craftr-build/craftr.git@development
+  # Install Craftr.
+  - nodepy-pm install git+https://github.com/craftr-build/craftr.git@master
 
-  # Go back to repository directory and build.
-  - cd C:\projects\niklasrosenstein-maxon-c4d
-  - C:\Python35\Scripts\craftr export -d .version=%C4DVERSION% -d toolkit=msvc-%VSVERSION% -d target=%VSTARGET%
-  - C:\Python35\Scripts\craftr build
+  # self install
+  - nodepy-pm install
 
-build: off
+build_script:
+  - craftr --configure --options maxon-c4d.version=%C4DVERSION% msvc.version=%VSVERSION% msvc.arch=%VSTARGET%
+  - craftr --build
 
 matrix:
   allow_failures:

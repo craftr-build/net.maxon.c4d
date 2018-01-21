@@ -240,7 +240,7 @@ elif platform in ('mac', 'linux'):
     exported_defines = defines,
     exceptions = False,
     rtti = rtti,
-    std = 'c++11',
+    cpp_std = 'c++11',
     forced_includes = forced_includes,
     compiler_flags = flags
   )

@@ -222,12 +222,12 @@ elif platform in ('mac', 'linux'):
     flags += sh.split('''
       -Wno-multichar -Wno-strict-aliasing -Wno-shadow -Wno-conversion-null''')
 
-  forced_include = []
+  forced_includes = []
   if platform == 'mac' and release <= 15:
     if debug:
-      forced_include = [path.join(dirs['source'], 'ge_mac_debug_flags.h')]
+      forced_includes = [path.join(dirs['source'], 'ge_mac_debug_flags.h')]
     else:
-      forced_include = [path.join(dirs['source'], 'ge_mac_flags.h')]
+      forced_includes = [path.join(dirs['source'], 'ge_mac_flags.h')]
     for f in ['__C4D_64BIT', '__MAC']:  # already in flags header
       try: defines.remove(f)
       except ValueError: pass
@@ -241,7 +241,8 @@ elif platform in ('mac', 'linux'):
     exceptions = False,
     rtti = rtti,
     std = 'c++11',
-    forced_include = forced_include,
+    forced_includes = forced_includes,
+    compiler_flags = flags
   )
 
 else:

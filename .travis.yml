@@ -3,7 +3,6 @@ os:
 - osx
 - linux
 
-osx_image: xcode7.3
 addons:
   apt:
     sources:
@@ -82,7 +81,7 @@ install:
       echo "Downloading \"$URL\" ...";
       mkdir _temp;
       curl -sSfL $URL -o "_temp/xcode$XCODE_VERSION.dmg";
-      osxt xcode install "_temp/xcode$XCODE_VERSION.dmg" xcode5;
+      sudo osxt xcode install "_temp/xcode$XCODE_VERSION.dmg" xcode5;
       export CC=$PWD/xcode5/usr/bin/clang;
       export CXX=$PWD/xcode5/usr/bin/clang++;
     fi

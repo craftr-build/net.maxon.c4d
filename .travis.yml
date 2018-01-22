@@ -54,15 +54,16 @@ install:
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then
       export CC=gcc-5;
       export CXX=g++-5;
-      PIPUSERINSTALLER=--user;
+      PIPUSERINSTALL=--user;
+      NODEPYGLOBALINSTALL=-g;
     fi
 
   # -------------------------------------------------------------------------
 
   # Install Node.py.
-  - $PIP install $PIPUSERINSTALLER git+https://github.com/nodepy/nodepy.git@develop
+  - $PIP install $PIPUSERINSTALL git+https://github.com/nodepy/nodepy.git@develop
   - nodepy --version
-  - nodepy https://nodepy.org/install-pm develop -g
+  - nodepy https://nodepy.org/install-pm develop $NODEPYGLOBALINSTALL
   - nodepy-pm --version
   - export PATH="$(nodepy-pm bin):$PATH"
 

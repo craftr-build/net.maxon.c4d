@@ -141,6 +141,7 @@ if platform == 'win':
     exported_includes = include,
     exported_defines = defines,
     rtti = rtti,
+    cpp_std = 'c++11',
     options = dict(
       msvc_disable_warnings = (
         '4062 4100 4127 4131 4201 4210 4242 4244 4245 4305 4310 4324 4355 '
@@ -241,6 +242,7 @@ elif platform in ('mac', 'linux'):
     exceptions = False,
     rtti = rtti,
     cpp_std = 'c++11',
+    cpp_stdlib = 'libc++' if cxx.compiler.id == 'llvm' else None,
     forced_includes = forced_includes,
     compiler_flags = flags
   )

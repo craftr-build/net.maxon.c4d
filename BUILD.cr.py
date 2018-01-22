@@ -15,16 +15,13 @@ else:
   raise EnvironmentError('unsupported platform: {!r}'.format(sys.platform))
 
 directory = craftr.options.get('maxon.c4d.directory')
-version = craftr.options.get('maxon.c4d.version')
-url = craftr.options.get('maxon.c4d.url')
 release = craftr.options.get('maxon.c4d.release', None)
 rtti = craftr.options.get('maxon.c4d.rtti', False)
 
 
 # ============================================================================
 # Determine the Cinema 4D installation directory and release number from the
-# current working directory, OR download the Cinema 4D SDK source files if
-# a specific version/url is specified.
+# current working directory, OR download the Cinema 4D SDK.
 # ============================================================================
 
 @functools.lru_cache()
@@ -35,30 +32,22 @@ def get_c4d_path_and_release():
     raise EnvironmentError('C4D installation path could not be determined')
   return match.groups()
 
-# If either the version or url options are specified, we download the
-# Cinema 4D SDK instead of assuming that we can derive it from the path
-# of the currently executed package.
-if version or url:
-  if not url:
-    url = "https://public.niklasrosenstein.com/cinema4d/c4dsdkarchives/c4dsdk-${VERSION}.tar.gz"
-  if version:
-    url = url.replace('${VERSION}', version)
-  elif '${VERSION}' in url:
-    raise EnvironmentError('found ${VERSION} variable in .url option, '
-      'but .version option is not set')
+if not directory:
+  try:
+    directory = get_c4d_path_and_release()[0]
+  except EnvironmentError:
+    if release:
+      url = craftr.fmt("https://public.niklasrosenstein.com/cinema4d/c4dsdkarchives/c4dsdk-{release}.tar.gz")
+      directory = path.join(craftr.get_source_archive(url), 'c4dsdk-' + release)
+    else:
+      raise
 
-  directory = path.join(craftr.get_source_archive(url), 'c4dsdk-' + version)
-  if not release:
-    release = int(float(version.split('-', 1)[0]))
-elif not directory:
-  directory = get_c4d_path_and_release()[0]
-
-if not release:
-  release = int(get_c4d_path_and_release()[1])
+if release:
+  release = int(float(release.split('-', 1)[0]))  # remove possible -llvm6fix suffix
 else:
-  release = int(release)
+  release = int(get_c4d_path_and_release()[1])
 
-print('Maxon Cinema 4D SDK R{}'.format(version or release))
+print('Maxon Cinema 4D SDK R{}'.format(release))
 
 # ============================================================================
 # Construct paths to all important SDK directories.

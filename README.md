@@ -1,12 +1,11 @@
 ## @craftr/maxon.c4d
 
 [![Build Status](https://travis-ci.org/craftr-build/craftr-maxon.c4d.svg?branch=master)](https://travis-ci.org/craftr-build/craftr-maxon.c4d)
-[![Build status](https://ci.appveyor.com/api/projects/status/5drmctmptqgdq6cs?svg=true)](https://ci.appveyor.com/project/NiklasRosenstein/craftr-maxon.c4d)
+[![Build status](https://ci.appveyor.com/api/projects/status/nqvbfo3u7qpw6mkk?svg=true)](https://ci.appveyor.com/project/NiklasRosenstein/craftr-maxon-c4d)
 
   [Craftr]: https://craftr.net
 
 &ndash; Build the Cinema 4D SDK and plugins with [Craftr].
-
 
 __Features__:
 

@@ -21,7 +21,7 @@ install:
   - nodepy-pm install
 
 build_script:
-  - craftr --configure --options maxon.c4d.version=%C4DVERSION% msvc.version=%VSVERSION% msvc.arch=%VSTARGET%
+  - craftr --configure --options maxon.c4d.release=%C4DVERSION% msvc.version=%VSVERSION% msvc.arch=%VSTARGET%
   - craftr --build
 
 matrix:

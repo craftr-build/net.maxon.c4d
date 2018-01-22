@@ -96,5 +96,5 @@ install:
 
 
 script:
-  - craftr --configure --options maxon-c4d.version=$C4DVERSION
+  - craftr --configure --options maxon.c4d.version=$C4DVERSION
   - craftr --build

@@ -14,11 +14,11 @@ elif sys.platform.startswith('linux'):
 else:
   raise EnvironmentError('unsupported platform: {!r}'.format(sys.platform))
 
-directory = craftr.options.get('maxon-c4d.directory')
-version = craftr.options.get('maxon-c4d.version')
-url = craftr.options.get('maxon-c4d.url')
-release = craftr.options.get('maxon-c4d.release', None)
-rtti = craftr.options.get('maxon-c4d.rtti', False)
+directory = craftr.options.get('maxon.c4d.directory')
+version = craftr.options.get('maxon.c4d.version')
+url = craftr.options.get('maxon.c4d.url')
+release = craftr.options.get('maxon.c4d.release', None)
+rtti = craftr.options.get('maxon.c4d.rtti', False)
 
 
 # ============================================================================
@@ -29,7 +29,7 @@ rtti = craftr.options.get('maxon-c4d.rtti', False)
 
 @functools.lru_cache()
 def get_c4d_path_and_release():
-  path = craftr.options.get('maxon-c4d.directory', __file__) + '/'
+  path = (directory or __file__) + '/'
   match = re.search(r'(.*Cinema\s+4D\s+R(\d+).*?[/\\])', path, re.I)
   if not match:
     raise EnvironmentError('C4D installation path could not be determined')

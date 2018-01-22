@@ -1,9 +1,8 @@
 
-
 import functools
 import re
 import os, sys
-import craftr, {path} from 'craftr'
+import craftr, {path, sh} from 'craftr'
 import cxx from '@craftr/cxx'
 
 if sys.platform.startswith('win32'):
@@ -15,11 +14,11 @@ elif sys.platform.startswith('linux'):
 else:
   raise EnvironmentError('unsupported platform: {!r}'.format(sys.platform))
 
-directory = craftr.options.get('maxon-c4d.directory')
-version = craftr.options.get('maxon-c4d.version')
-url = craftr.options.get('maxon-c4d.url')
-release = craftr.options.get('maxon-c4d.release', None)
-rtti = craftr.options.get('maxon-c4d.rtti', False)
+directory = craftr.options.get('maxon.c4d.directory')
+version = craftr.options.get('maxon.c4d.version')
+url = craftr.options.get('maxon.c4d.url')
+release = craftr.options.get('maxon.c4d.release', None)
+rtti = craftr.options.get('maxon.c4d.rtti', False)
 
 
 # ============================================================================
@@ -30,7 +29,7 @@ rtti = craftr.options.get('maxon-c4d.rtti', False)
 
 @functools.lru_cache()
 def get_c4d_path_and_release():
-  path = craftr.options.get('maxon-c4d.directory', __file__) + '/'
+  path = (directory or __file__) + '/'
   match = re.search(r'(.*Cinema\s+4D\s+R(\d+).*?[/\\])', path, re.I)
   if not match:
     raise EnvironmentError('C4D installation path could not be determined')
@@ -107,6 +106,13 @@ include = list(map(path.norm, include))
 debug = not craftr.is_release
 
 if platform == 'win':
+  plugin_ext = '.cdl64' if cxx.compiler.is64bit else '.cdl'
+elif platform == 'darwin':
+  plugin_ext = '.dylib'
+elif platform == 'linux':
+  plugin_ext = '.so'
+
+if platform == 'win':
   defines = ['__PC']
   if release >= 15:
     defines += ['MAXON_API', 'MAXON_TARGET_WINDOWS']
@@ -131,8 +137,6 @@ if platform == 'win':
     # adds `#define decltype typeof` in compilerdetection.h.
     defines += ['_HAS_DECLTYPE']
 
-  plugin_ext = '.cdl64' if cxx.compiler.is64bit else '.cdl'
-
   cxx.library(
     name = 'c4d',
     preferred_linkage = 'static',
@@ -142,6 +146,7 @@ if platform == 'win':
     exported_includes = include,
     exported_defines = defines,
     rtti = rtti,
+    cpp_std = 'c++11',
     options = dict(
       msvc_disable_warnings = (
         '4062 4100 4127 4131 4201 4210 4242 4244 4245 4305 4310 4324 4355 '
@@ -184,7 +189,7 @@ elif platform in ('mac', 'linux'):
     defines += ['__C4D_64BIT']
 
   if release <= 15:
-    flags = shell.split('''
+    flags = sh.split('''
       -fmessage-length=0 -Wno-trigraphs -Wno-missing-field-initializers
       -Wno-non-virtual-dtor -Woverloaded-virtual -Wmissing-braces -Wparentheses
       -Wno-switch -Wunused-function -Wunused-label -Wno-unused-parameter
@@ -193,12 +198,12 @@ elif platform in ('mac', 'linux'):
       -Wdeprecated-declarations -Wno-invalid-offsetof -msse3 -fvisibility=hidden
       -fvisibility-inlines-hidden -Wno-sign-conversion -fno-math-errno''')
     if platform == 'mac':
-      flags += shell.split('''
+      flags += sh.split('''
         -mmacosx-version-min=10.6 -Wno-int-conversion -Wno-logical-op-parentheses
         -Wno-shorten-64-to-32 -Wno-enum-conversion -Wno-bool-conversion
         -Wno-constant-conversion''')
   else:
-    flags = shell.split('''
+    flags = sh.split('''
       -fmessage-length=0 -Wno-trigraphs -Wmissing-field-initializers
       -Wno-non-virtual-dtor -Woverloaded-virtual -Wmissing-braces -Wparentheses
       -Wno-switch -Wunused-function -Wunused-label -Wno-unused-parameter
@@ -207,12 +212,12 @@ elif platform in ('mac', 'linux'):
       -Wdeprecated-declarations -Wno-invalid-offsetof -msse3 -fvisibility=hidden
       -fvisibility-inlines-hidden -Wno-sign-conversion -fno-math-errno''')
     if platform == 'mac':
-      flags += shell.split('''
+      flags += sh.split('''
         -mmacosx-version-min=10.7 -Wconstant-conversion -Wbool-conversion
         -Wenum-conversion -Wshorten-64-to-32 -Wint-conversion''')
 
   if platform == 'mac':
-    flags += shell.split('''
+    flags += sh.split('''
       -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0
       -fpascal-strings -fasm-blocks -Wno-c++11-extensions -Wno-newline-eof
       -Wno-four-char-constants -Wno-exit-time-destructors
@@ -220,15 +225,15 @@ elif platform in ('mac', 'linux'):
     # These flags are not usually set in the C4D SDK.
     flags += ['-Wno-unused-private-field']
   elif platform == 'linux':
-    flags += shell.split('''
+    flags += sh.split('''
       -Wno-multichar -Wno-strict-aliasing -Wno-shadow -Wno-conversion-null''')
 
-  forced_include = []
+  forced_includes = []
   if platform == 'mac' and release <= 15:
     if debug:
-      forced_include = [path.join(dirs['source'], 'ge_mac_debug_flags.h')]
+      forced_includes = [path.join(dirs['source'], 'ge_mac_debug_flags.h')]
     else:
-      forced_include = [path.join(dirs['source'], 'ge_mac_flags.h')]
+      forced_includes = [path.join(dirs['source'], 'ge_mac_flags.h')]
     for f in ['__C4D_64BIT', '__MAC']:  # already in flags header
       try: defines.remove(f)
       except ValueError: pass
@@ -241,12 +246,14 @@ elif platform in ('mac', 'linux'):
     exported_defines = defines,
     exceptions = False,
     rtti = rtti,
-    std = 'c++11',
-    forced_include = forced_include,
+    cpp_std = 'c++11',
+    cpp_stdlib = 'libc++' if cxx.compiler.id == 'llvm' else None,
+    forced_includes = forced_includes,
+    compiler_flags = flags
   )
 
 else:
-  raise RuntimeError(platform)
+  raise EnvironmentError('no configuration for platform: {!r}'.format(platform))
 
 
 cxx.prebuilt(

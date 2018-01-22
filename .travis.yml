@@ -3,7 +3,6 @@ os:
 - osx
 - linux
 
-osx_image: xcode7.3
 addons:
   apt:
     sources:
@@ -21,31 +20,21 @@ env:
   - C4DVERSION=13.051 XCODE_VERSION=5.0-10.08-2013.09.18
   - C4DVERSION=14.041 XCODE_VERSION=5.0-10.08-2013.09.18
   # These fixed versions compile with LLVM 6+ (so, including 7.3).
-  - C4DVERSION=12.032-llvm6fix
-  - C4DVERSION=13.051-llvm6fix
-  - C4DVERSION=14.041-llvm6fix
+  - C4DVERSION=12.032-llvm6fix XCODE_VERSION=xcode6.4-10.10-2015.06.30.dmg
+  - C4DVERSION=13.051-llvm6fix XCODE_VERSION=xcode6.4-10.10-2015.06.30.dmg
+  - C4DVERSION=14.041-llvm6fix XCODE_VERSION=xcode6.4-10.10-2015.06.30.dmg
   # These we can compile with XCode 7.3.
-  - C4DVERSION=15.064
-  - C4DVERSION=16.021
-  - C4DVERSION=16.050
-  - C4DVERSION=17.048
-  - C4DVERSION=18.030
+  - C4DVERSION=15.064 XCODE_VERSION=xcode7.3.1-10.11-2016.05.04.dmg
+  - C4DVERSION=16.021 XCODE_VERSION=xcode7.3.1-10.11-2016.05.04.dmg
+  - C4DVERSION=16.050 XCODE_VERSION=xcode7.3.1-10.11-2016.05.04.dmg
+  - C4DVERSION=17.048 XCODE_VERSION=xcode7.3.1-10.11-2016.05.04.dmg
+  - C4DVERSION=18.030 XCODE_VERSION=xcode7.3.1-10.11-2016.05.04.dmg
+  - C4DVERSION=18.041 XCODE_VERSION=xcode7.3.1-10.11-2016.05.04.dmg
 
 install:
   - mkdir .tmp
   - export PATH=$PATH:$PWD/.tmp
   - .ci/tools/get-ninja v1.7.2 .tmp
-
-  # Apparently we need this on OSX because otherwise we can run into the error:
-  #     /Users/travis/build.sh: line 109: shell_session_update: command not found
-  # See travis-ci#6307
-  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then rvm get stable; fi
-  - if [ "$TRAVIS_OS_NAME" == "osx" ] && [ ! -z "$XCODE_VERSION" ]; then
-      set -e;
-      .ci/tools/get-xcode-cltools $XCODE_VERSION xcode5;
-      export CC=$PWD/xcode5/usr/bin/clang;
-      export CXX=$PWD/xcode5/usr/bin/clang++;
-    fi
 
   # OSX: Install Python 3 with Homebrew.
   - if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew update; fi
@@ -59,20 +48,44 @@ install:
   # Install Pip into that Python version.
   - curl -s https://bootstrap.pypa.io/get-pip.py | sudo $PYTHON
 
+  # -------------------------------------------------------------------------
+
   # Linux: Use the newer version of GCC that we installed with addons:apt:packages
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then
       export CC=gcc-5;
       export CXX=g++-5;
+      PIPUSERINSTALL=--user;
+      NODEPYGLOBALINSTALL=-g;
     fi
 
   # -------------------------------------------------------------------------
 
   # Install Node.py.
-  - $PIP install --user git+https://github.com/nodepy/nodepy.git@develop
+  - $PIP install $PIPUSERINSTALL git+https://github.com/nodepy/nodepy.git@develop
   - nodepy --version
-  - nodepy https://nodepy.org/install-pm develop -g
+  - nodepy https://nodepy.org/install-pm develop $NODEPYGLOBALINSTALL
   - nodepy-pm --version
   - export PATH="$(nodepy-pm bin):$PATH"
+
+  # -------------------------------------------------------------------------
+
+  # Apparently we need this on OSX because otherwise we can run into the error:
+  #     /Users/travis/build.sh: line 109: shell_session_update: command not found
+  # See travis-ci#6307
+  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then rvm get stable; fi
+
+  # Install XCode command-line tools.
+  - if [ "$TRAVIS_OS_NAME" == "osx" ] && [ ! -z "$XCODE_VERSION" ]; then
+      set -e;
+      nodepy-pm install git+https://github.com/NiklasRosenstein/osxt.git;
+      URL=https://public.niklasrosenstein.com/software/xcode-cltools/xcode${XCODE_VERSION}.dmg;
+      echo "Downloading \"$URL\" ...";
+      mkdir _temp;
+      curl -sSfL $URL -o "_temp/xcode$XCODE_VERSION.dmg";
+      sudo osxt xcode install "_temp/xcode$XCODE_VERSION.dmg" xcode5;
+      export CC=$PWD/xcode5/usr/bin/clang;
+      export CXX=$PWD/xcode5/usr/bin/clang++;
+    fi
 
   # Install Craftr.
   - nodepy-pm install git+https://github.com/craftr-build/craftr.git@master
@@ -83,5 +96,5 @@ install:
 
 
 script:
-  - craftr --configure --options maxon-c4d.version=$C4DVERSION
+  - craftr --configure --options maxon.c4d.version=$C4DVERSION
   - craftr --build

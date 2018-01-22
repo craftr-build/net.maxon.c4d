@@ -106,6 +106,13 @@ include = list(map(path.norm, include))
 debug = not craftr.is_release
 
 if platform == 'win':
+  plugin_ext = '.cdl64' if cxx.compiler.is64bit else '.cdl'
+elif platform == 'darwin':
+  plugin_ext = '.dylib'
+elif platform == 'linux':
+  plugin_ext = '.so'
+
+if platform == 'win':
   defines = ['__PC']
   if release >= 15:
     defines += ['MAXON_API', 'MAXON_TARGET_WINDOWS']
@@ -129,8 +136,6 @@ if platform == 'win':
     # Cinema 4D does not properly detect Visual Studio 2015 Update 3 and
     # adds `#define decltype typeof` in compilerdetection.h.
     defines += ['_HAS_DECLTYPE']
-
-  plugin_ext = '.cdl64' if cxx.compiler.is64bit else '.cdl'
 
   cxx.library(
     name = 'c4d',
@@ -248,7 +253,7 @@ elif platform in ('mac', 'linux'):
   )
 
 else:
-  raise RuntimeError(platform)
+  raise EnvironmentError('no configuration for platform: {!r}'.format(platform))
 
 
 cxx.prebuilt(

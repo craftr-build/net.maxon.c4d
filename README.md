@@ -7,55 +7,46 @@
 
 &ndash; Build the Cinema 4D SDK and plugins with [Craftr].
 
-__Features__:
+__Contents__
 
-- Provides `__LEGACY_API` functionality for R17+ (just use `c4d.legacy_sdk`
-  instead of `c4d.sdk`).
-- Provides a header `craftr/c4d_python.h` that conveniently includes `Python.h`
-  which is not straight forward.
-- Supports compilation with MSVC and Clang (Mac OS only).
-- Automatically download the Cinema 4D SDK source when compiling outside
-  of a Cinema 4D application environment.
-- Support for compilation on Linux with GCC (experimental)
+* [Features](#features)
+* [Configuration](#configuration)
+* [Version Matrix](#version-matrix)
+* [Example build script](#example-build-script)
+* [FAQ](#faq)
+* [Known Issues](#known-issues)
 
-__Configuration__:
+### Features
 
-- `maxon.c4d.debug` &ndash; Inheritable option. Specifies whether the Cinema 4D SDK
-  is built in debug mode and with debug symbols. Note that this enables some
-  C4D SDK specific debug features, but the C++ toolkit's the `debug` option
-  should be enabled as well. Thus, it is always a good idea to set the `debug`
-  option globally.
-- `maxon.c4d.rtti` &ndash; By default the Cinema 4D SDK compiles with RTTI, thus the
-  default value for this option is `false`. Note that this option will be
-  set globally if no explicit global value is present in the Craftrfile.
-- `maxon.c4d.directory` &ndash; The directory of the Cinema 4D installation. If this
-  option is not set, it will be automatically determined from the path of this
-  Craftr package (TODO: Use the path of the MAIN Craftr package instead).
-- `maxon.c4d.release` &ndash; The Cinema 4D release to compile for. If not specified,
-  the script will attempt to automatically determine the number of the
-  `maxon.c4d.directory` or `maxon.c4d.version` options.
-- `maxon.c4d.version` &ndash; If specified, instead of using the `maxon.c4d.directory` option,
-  the Cinema 4D SDK will be downloaded from the URL specified with the `.url`
-  option. Check https://public.niklasrosenstein.com/cinema4dsdk/ for available
-  versions if you keep the `.url` default value.
-- `maxon.c4d.url` &ndash; The URL to download the Cinema 4D SDK source from. The default
-  value for this option is `https://public.niklasrosenstein.com/cinema4dsdk/c4dsdk-${VERSION}.tar.gz`.
+- Provides `__LEGACY_API` functionality for R17+
+- Compiles plugins on Windows (MSVC), macOS (Clang) and Linux (GCC)
+- Can automatically detect your Cinema 4D release and compiler version to
+  adjust command-line flags accordingly (given that you installed Cinema 4D
+  to a directory that is called `Cinema 4D RX.YYY`)
 
-__Version Matrix__:
+### Configuration
 
-| Version       | Windows            | OSX               |
-| ------------- | ------------------ | ----------------- |
-| Cinema 4D R19 | Visual Studio 2015 | Apple XCode 8     |
-| Cinema 4D R18 | Visual Studio 2013 | Apple XCode 7     |
-| Cinema 4D R17 | Visual Studio 2013 | Apple XCode 6     |
-| Cinema 4D R16 | Visual Studio 2012 | Apple XCode 5.0.2 |
-| Cinema 4D R15 | Visual Studio 2012 | Apple XCode 4.6.3 |
-| Cinema 4D R14 | Visual Studio 2010 | Apple XCode 4.3.2 |
-| Cinema 4D R13 | Visual Studio 2005 | Apple XCode 3.2.6 |
+| Option                | Description                              |
+| --------------------- | ---------------------------------------- |
+| `maxon.c4d.directory` | The directory of the Cinema 4D installation. If this option is *not set*, it will be automatically determined from the install location of the `@craftr/maxon.c4d` package. |
+| `maxon.c4d.release`   | Specify the Cinema 4D release number if it can not be determined automatically from the `directory` option. In case no Cinema 4D Application directory was specified and none was automatically determined, the Cinema 4D SDK matching this release will be downloaded (if available). |
+| `maxon.c4d.rtti`      | Usually the Cinema 4D SDK is compiled without RTTI, thus the default value for this option is `false`. Set it to `true` to enable RTTI. |
 
-> <sub>source: https://developers.maxon.net/?page_id=1108</sub>
+### Version Matrix
 
-__Example__:
+| Cinema 4D | Windows      | OSX               |
+| ----| ------------------ | ----------------- |
+| R19 | Visual Studio 2015 | Apple XCode 8     |
+| R18 | Visual Studio 2013 | Apple XCode 7     |
+| R17 | Visual Studio 2013 | Apple XCode 6     |
+| R16 | Visual Studio 2012 | Apple XCode 5.0.2 |
+| R15 | Visual Studio 2012 | Apple XCode 4.6.3 |
+| R14 | Visual Studio 2010 | Apple XCode 4.3.2 |
+| R13 | Visual Studio 2005 | Apple XCode 3.2.6 |
+
+Source: https://developers.maxon.net/?page_id=1108
+
+### Example build script
 
 ```python
 import craftr from 'craftr'
@@ -72,10 +63,23 @@ cxx.library(
 
 To use the legacy API, use the `//@craftr/maxon.c4d:c4d_legacy` target instead.
 
-__Known Issues__:
+### FAQ
 
-- Building R15.064, R16.021, R16.050 with **Visual Studio 2015** <sub>v140</sub> fails
+* **Could this be used to compile plugins with MinGW?**
+  Unfortunately, no. The Cinema 4D API (actually, ABI) requires the
+  `/vmg /vms` options in Visual Studio which render dynamic libraries
+  compiled with MinGW incompatible. More info
+  [here](https://stackoverflow.com/questions/11332585/g-equivalents-for-visualc-vmg-vms).
 
-__To do__:
+* **Will there be support for Clang-CL?** Yes. A former version of this
+  package (for a previous Craftr version) already supported Clang-CL. In
+  contrast to MinGW, dynamic libraries compiled with Clang-CL can be made
+  ABI compatible with Visual C.
 
-- Support for MinGW
+### Known Issues
+
+* The following Cinema 4D SDK's (and most likely all SDK's in that general
+  release) can not be built with Visual Studio 2015.
+    * R15.064
+    * R16.021
+    * R16.050

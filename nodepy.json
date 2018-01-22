@@ -4,6 +4,7 @@
   "license": "MIT",
   "authors": ["rosensteinniklas@gmail.com"],
   "description": "Build Cinema 4D plugins with Craftr.",
+  "main": "BUILD.cr.py",
   "dependencies": {
     "craftr": "*",
     "@craftr/cxx": "*"

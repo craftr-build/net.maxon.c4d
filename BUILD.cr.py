@@ -112,7 +112,7 @@ elif platform == 'darwin':
 elif platform == 'linux':
   plugin_ext = '.so'
 
-if platform == 'win':
+if platform == 'win' and cxx.compiler.id == 'msvc':
   defines = ['__PC']
   if release >= 15:
     defines += ['MAXON_API', 'MAXON_TARGET_WINDOWS']
@@ -165,7 +165,7 @@ if platform == 'win':
     )
   )
 
-elif platform in ('mac', 'linux'):
+elif platform in ('mac', 'linux') or cxx.compiler.id == 'mingw':
   stdlib = 'stdc++' if release <= 15 else 'c++'
 
   defines = []
@@ -177,6 +177,11 @@ elif platform in ('mac', 'linux'):
     defines += ['__LINUX']
     if release >= 15:
       defines += ['MAXON_TARGET_LINUX']
+  elif platform == 'win':
+    defines += ['__PC', '_HAS_NOEXCEPT']
+    if release >= 15:
+      defines += ['MAXON_TARGET_WINDOWS']
+    defines += ['C4D_ALIGN(_x_, _a_)=_x_ __attribute__((aligned(_a_)))']
   else:
     assert False
 
@@ -224,9 +229,14 @@ elif platform in ('mac', 'linux'):
       -Wno-missing-prototypes''')
     # These flags are not usually set in the C4D SDK.
     flags += ['-Wno-unused-private-field']
-  elif platform == 'linux':
+  elif platform == 'linux' or platform == 'win':
     flags += sh.split('''
       -Wno-multichar -Wno-strict-aliasing -Wno-shadow -Wno-conversion-null''')
+
+  if platform == 'win':
+    # The C4D API uses a lot of MSVC warning disable pragmas on Windows.
+    # We don't want a warning for every one of tose.
+    flags += ['-Wno-unknown-pragmas']
 
   forced_includes = []
   if platform == 'mac' and release <= 15:

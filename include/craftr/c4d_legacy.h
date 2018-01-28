@@ -55,10 +55,10 @@ typedef Matrix4d		Matrix4;
 	inline Float32 Ld(Float32 val) { return log2f(val); }
 	inline Float64 Ld(Float64 val) { return log2(val); }
 #else
-	inline Float32 Ln10(Float32 val) { return log10(val); }
+	inline Float32 Ln10(Float32 val) { return log10f(val); }
 	inline Float64 Ln10(Float64 val) { return log10(val); }
 
-	inline Float32 Ld(Float32 val) { return log(val) * 1.4426950408889634073599246810019f; }
+	inline Float32 Ld(Float32 val) { return logf(val) * 1.4426950408889634073599246810019f; }
 	inline Float64 Ld(Float64 val) { return log(val) * 1.4426950408889634073599246810019; }
 #endif
 

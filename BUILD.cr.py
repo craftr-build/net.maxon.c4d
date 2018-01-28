@@ -47,7 +47,8 @@ if release:
 else:
   release = int(get_c4d_path_and_release()[1])
 
-print('Maxon Cinema 4D SDK R{}'.format(release))
+directory = path.canonical(directory)
+print('Maxon Cinema 4D SDK R{} ({})'.format(release, directory))
 
 # ============================================================================
 # Construct paths to all important SDK directories.

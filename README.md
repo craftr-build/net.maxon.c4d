@@ -1,4 +1,4 @@
-## @craftr/maxon.c4d
+## NiklasRosenstein/maxon.c4d
 
 [![Build Status](https://travis-ci.org/craftr-build/craftr-maxon.c4d.svg?branch=master)](https://travis-ci.org/craftr-build/craftr-maxon.c4d)
 [![Build status](https://ci.appveyor.com/api/projects/status/nqvbfo3u7qpw6mkk?svg=true)](https://ci.appveyor.com/project/NiklasRosenstein/craftr-maxon-c4d)
@@ -26,11 +26,11 @@ __Contents__
 
 ### Configuration
 
-| Option                | Description                              |
-| --------------------- | ---------------------------------------- |
-| `maxon.c4d.directory` | The directory of the Cinema 4D installation. If this option is *not set*, it will be automatically determined from the install location of the `@craftr/maxon.c4d` package. |
-| `maxon.c4d.release`   | Specify the Cinema 4D release number if it can not be determined automatically from the `directory` option. In case no Cinema 4D Application directory was specified and none was automatically determined, the Cinema 4D SDK matching this release will be downloaded (if available). |
-| `maxon.c4d.rtti`      | Usually the Cinema 4D SDK is compiled without RTTI, thus the default value for this option is `false`. Set it to `true` to enable RTTI. |
+| Option       | Description  |
+| ------------ | ------------ |
+| `:directory` | The directory of the Cinema 4D installation. If this option is *not set*, it will be automatically determined from the install location of the `@craftr/maxon.c4d` package. |
+| `:release`   | Specify the Cinema 4D release number if it can not be determined automatically from the `directory` option. In case no Cinema 4D Application directory was specified and none was automatically determined, the Cinema 4D SDK matching this release will be downloaded (if available). |
+| `:rtti`      | Usually the Cinema 4D SDK is compiled without RTTI, thus the default value for this option is `false`. Set it to `true` to enable RTTI. |
 
 ### Version Matrix
 
@@ -49,19 +49,25 @@ Source: https://developers.maxon.net/?page_id=1108
 ### Example build script
 
 ```python
-import craftr from 'craftr'
-import cxx from '@craftr/cxx'
-import c4d from '@craftr/maxon.c4d'
+project "myplugin"
 
-cxx.library(
-  name = 'plugin',
-  deps = ['//@craftr/maxon.c4d:c4d'],
-  outname = 'myplugin' + c4d.plugin_ext,
-  srcs = craftr.glob('src/**/*.cpp')
-)
+target "plugin":
+  requires "NiklasRosenstein/maxon.c4d" as c4d
+  cxx.srcs = glob("src/**/*.cpp")
+  cxx.includes = ["include"]
+  cxx.productName = "myplugin" + c4d.plugin_suffix
 ```
 
-To use the legacy API, use the `//@craftr/maxon.c4d:c4d_legacy` target instead.
+To use the legacy SDK:
+
+```python
+project "myplugin"
+
+target "plugin":
+  requires "NiklasRosenstein/maxon.c4d" as c4d:
+    this.select = ["legacy"]
+  # ...
+```
 
 ### FAQ
 

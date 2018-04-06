@@ -253,7 +253,7 @@ eval:
   else:
     raise EnvironmentError('no configuration for platform: {!r}'.format(platform))
 
-target "sdk":
+public target "sdk":
   eval target.set_props(properties)
 
 target "legacy":

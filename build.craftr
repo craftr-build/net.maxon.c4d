@@ -76,6 +76,16 @@ eval:
     raise EnvironmentError('no C4D SDK sources found, source directory'
       ' = "{}"'.format(dirs['source']))
 
+  # There's unity build files for C4D in R19.053+. We can use them instead
+  # of the other sources, but we definitely need to use one or the other.
+  if any(path.base(x) == '_unity0.cpp' for x in sources):
+    s1 = [x for x in sources if path.base(x) in ('defaultallocator.cpp', 'debugglobals.cpp')]
+    sources = [x for x in sources if path.base(x).startswith('_unity')] + s1
+    del s1
+    unitybuild = False
+  else:
+    unitybuild = True
+
   # Gather a list of the C4D include directories.
   include = [
     dirs['source'],
@@ -147,7 +157,7 @@ eval:
       '!cxx.exceptions': False,
       '!cxx.rtti': options.rtti,
       '!cxx.cppStd': 'c++11',
-      '!cxx.compileFlags':  ( # TODO: Only for MSVC, not ClangCL?
+      '!cxx.compilerFlags':  ( # TODO: Only for MSVC, not ClangCL?
         '/vmg /vms /w44263 /FC /errorReport:prompt /fp:precise /Zc:wchar_t- '
         '/Gd /TP /WX- /MP /Gm- /Gs /Gy-').split() + flags,
       '!cxx.msvcDisableWarnings': (
@@ -255,6 +265,7 @@ eval:
 
 public target "sdk":
   eval target.set_props(properties)
+  export cxx.combineCppSources = unitybuild
 
 target "legacy":
   requires "@additional-includes"

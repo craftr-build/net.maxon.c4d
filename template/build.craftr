@@ -1,0 +1,16 @@
+project('myplugin', '1.0-0')
+
+cxx = require('net.craftr.lang.cxx')
+c4d = require('net.maxon.c4d')
+
+@target(builders=[cxx.build])
+def plugin():
+  depends('net.maxon.c4d:sdk')
+  properties({
+    'cxx.srcs': glob('src/**/*.cpp'),
+    'cxx.includes': ['plugin'],
+    'cxx.productName': 'myplugin' + c4d.plugin_suffix,
+    'cxx.productDirectory': './plugin',
+    'cxx.type': 'library',
+    'cxx.preferredLinkage': 'shared'
+  })

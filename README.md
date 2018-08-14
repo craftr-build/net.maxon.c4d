@@ -1,11 +1,11 @@
-## NiklasRosenstein/maxon.c4d
+## Module `net.maxon.c4d`
 
 [![Build Status](https://travis-ci.org/craftr-build/craftr-maxon.c4d.svg?branch=master)](https://travis-ci.org/craftr-build/craftr-maxon.c4d)
 [![Build status](https://ci.appveyor.com/api/projects/status/nqvbfo3u7qpw6mkk?svg=true)](https://ci.appveyor.com/project/NiklasRosenstein/craftr-maxon-c4d)
 
   [Craftr]: https://craftr.net
 
-&ndash; Build the Cinema 4D SDK and plugins with [Craftr].
+&ndash; Build the Cinema 4D SDK and plugins with [Craftr 4][Craftr].
 
 __Contents__
 
@@ -49,25 +49,27 @@ Source: https://developers.maxon.net/?page_id=1108
 ### Example build script
 
 ```python
-project "myplugin"
+project('myplugin', '1.0-0')
 
-target "plugin":
-  requires "NiklasRosenstein/maxon.c4d" as c4d
-  cxx.srcs = glob("src/**/*.cpp")
-  cxx.includes = ["include"]
-  cxx.productName = "myplugin" + c4d.plugin_suffix
+cxx = require('net.craftr.lang.cxx')
+c4d = require('net.maxon.c4d')
+
+@target(builders=[cxx.build])
+def plugin():
+  depends('net.maxon.c4d:sdk')
+  properties({
+    'cxx.srcs': glob('src/**/*.cpp'),
+    'cxx.includes': ['plugin'],
+    'cxx.productName': 'myplugin' + c4d.plugin_suffix,
+    'cxx.productDirectory': './plugin',
+    'cxx.type': 'library',
+    'cxx.preferredLinkage': 'shared'
+  })
+
 ```
 
-To use the legacy SDK:
-
-```python
-project "myplugin"
-
-target "plugin":
-  requires "NiklasRosenstein/maxon.c4d" as c4d:
-    this.select = ["legacy"]
-  # ...
-```
+Depend on the `net.maxon.c4d:legacy` target instead if your project uses
+old API (pre-R16).
 
 ### FAQ
 

@@ -1,49 +1,66 @@
-project "NiklasRosenstein/maxon.c4d"
-
-options:
-  str directory = ''
-  str release = ''
-  bool rtti = False
+# -*- coding: utf8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2018  Niklas Rosenstein
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
 import functools
 import re
 import os, sys
-import cxx from "craftr/lang/cxx"
-import {get_source_archive} from "craftr/tools/download"
+import cxx from 'net.craftr.lang.cxx'
+import {get_source_archive} from 'net.craftr.tool.download'
 
-target "additional-includes":
-  export cxx.includes = ['include']
+project('net.maxon.c4d', '1.0-0')
+options.add('directory', str, '')
+options.add('release', str, '')
+options.add('rtti', bool, False)
 
-##
-# Determine information to build the C4D SDK.
-##
 
-eval:
-  if OS.id == 'win32': platform = 'win'
-  elif OS.id == 'darwin': platform = 'mac'
-  elif OS.id == 'linux': platform = 'linux'
-  else: error('unsupported OS: {!r}'.format(OS.id))
+if OS.id == 'win32': platform = 'win'
+elif OS.id == 'darwin': platform = 'mac'
+elif OS.id == 'linux': platform = 'linux'
+else: error('unsupported OS: {!r}'.format(OS.id))
 
-  @functools.lru_cache()
-  def get_c4d_path_and_release():
-    path = (options.directory or __file__) + '/'
-    match = re.search(r'(.*Cinema\s+4D\s+R(\d+).*?[/\\])', path, re.I)
-    if not match:
-      error('C4D installation path could not be determined')
-    return match.groups()
 
+@functools.lru_cache()
+def get_c4d_path_and_release():
+  path = (options.directory or __file__) + '/'
+  match = re.search(r'(.*Cinema\s+4D\s+R(\d+).*?[/\\])', path, re.I)
+  if not match:
+    error('C4D installation path could not be determined')
+  return match.groups()
+
+
+def _init():
+  print(options)
   # Determine the Cinema 4D directory automatically or fallback to downloading
   # a Cinema 4D SDK source archive.
   if not options.directory:
     try:
       options.directory = get_c4d_path_and_release()[0]
-    except error.Type:
+    except ModuleError:
       if options.release:
         url = fmt("https://public.niklasrosenstein.com/cinema4d/c4dsdkarchives/c4dsdk-{options.release}.tar.gz")
         options.directory = path.join(get_source_archive(url), 'c4dsdk-' + options.release)
       else:
         raise
-
   options.directory = path.canonical(options.directory)
 
   # Normalize the release name or fall back to the release name that
@@ -53,20 +70,30 @@ eval:
   else:
     options.release = int(get_c4d_path_and_release()[1])
 
-  print('Maxon Cinema 4D SDK R{} ({})'.format(options.release, options.directory))
 
-  ##
-  # Construct paths to all important SDK directories.
-  ##
+_init()
+print('Maxon Cinema 4D SDK R{} ({})'.format(options.release, options.directory))
 
-  dirs = {}
-  dirs['c4d'] = options.directory
-  dirs['resource'] = path.join(dirs['c4d'], 'resource')
-  if options.release <= 15:
-    dirs['source'] = path.join(dirs['resource'], '_api')
-  else:
-    dirs['source'] = path.norm(path.join(dirs['c4d'], 'frameworks/cinema.framework/source'))
 
+dirs = {}
+dirs['c4d'] = options.directory
+dirs['resource'] = path.join(dirs['c4d'], 'resource')
+if options.release <= 15:
+  dirs['source'] = path.join(dirs['resource'], '_api')
+else:
+  dirs['source'] = path.norm(path.join(dirs['c4d'], 'frameworks/cinema.framework/source'))
+
+if platform == 'win':
+  plugin_suffix = '.cdl64' if cxx.compiler.is64bit else '.cdl'
+elif platform == 'darwin':
+  plugin_suffix = '.dylib'
+elif platform == 'linux':
+  plugin_suffix = '.so'
+else: assert False
+
+
+@target(builders=[cxx.build])
+def sdk():
   ##
   # Compile the Cinema 4D SDK as a static library.
   ##
@@ -82,9 +109,6 @@ eval:
     s1 = [x for x in sources if path.base(x) in ('defaultallocator.cpp', 'debugglobals.cpp')]
     sources = [x for x in sources if path.base(x).startswith('_unity')] + s1
     del s1
-    unitybuild = False
-  else:
-    unitybuild = True
 
   # Gather a list of the C4D include directories.
   include = [
@@ -108,19 +132,9 @@ eval:
     include += glob(['modules/*/description'], parent = dirs['resource'])
   include = list(map(path.norm, include))
 
-  if platform == 'win':
-    plugin_suffix = '.cdl64' if cxx.compiler.is64bit else '.cdl'
-  elif platform == 'darwin':
-    plugin_suffix = '.dylib'
-  elif platform == 'linux':
-    plugin_suffix = '.so'
-  else: assert False
-
   ##
   # Construct the build target properties.
   ##
-
-  properties = {}
 
   if platform == 'win':
     defines = ['__PC']
@@ -147,23 +161,25 @@ eval:
       # adds `#define decltype typeof` in compilerdetection.h.
       defines += ['_HAS_DECLTYPE']
 
-    properties = {
+    properties({
       'cxx.srcs': sources,
       'cxx.type': 'library',
       'cxx.preferredLinkage': 'static',
       'cxx.productName': 'cinema4d-{}{}$(ext)'.format(cxx.compiler.arch, '' if BUILD.release else 'd'),
-      '!cxx.includes': include,
-      '!cxx.defines': defines,
-      '!cxx.exceptions': False,
-      '!cxx.rtti': options.rtti,
-      '!cxx.cppStd': 'c++11',
-      '!cxx.compilerFlags':  ( # TODO: Only for MSVC, not ClangCL?
+      '@cxx.includes': include,
+      '@cxx.defines': defines,
+      '@cxx.exceptions': False,
+      '@cxx.rtti': options.rtti,
+      '@cxx.cppStd': 'c++14',
+      '@cxx.compilerFlags':  ( # TODO: Only for MSVC, not ClangCL?
         '/vmg /vms /w44263 /FC /errorReport:prompt /fp:precise /Zc:wchar_t- '
         '/Gd /TP /WX- /MP /Gm- /Gs /Gy-').split() + flags,
-      '!cxx.msvcDisableWarnings': (
+      '@cxx.msvcDisableWarnings': (
         '4062 4100 4127 4131 4201 4210 4242 4244 4245 4305 4310 4324 4355 '
         '4365 4389 4505 4512 4611 4706 4718 4740 4748 4996 4595 4458').split(),
-      '!cxx.msvcWarningsAsErrors': ['4264']
+      '@cxx.msvcWarningsAsErrors': [
+        '4264', # virtual_function' : no override available for virtual member function from base 'class'; function is hidden
+      ],
       #clangcl_compile_additional_flags = (
       #  '-Wno-unused-parameter -Wno-macro-redefined -Wno-microsoft-enum-value '
       #  '-Wno-unused-private-field'.split()
@@ -171,7 +187,7 @@ eval:
       #llvm_compile_additional_flags = (
       #  '-fms-memptr-rep=virtual -fms-memptr-rep=single'.split()  # /vmg /vms
       #),
-    }
+    })
 
   elif platform in ('mac', 'linux'):
     stdlib = 'stdc++' if options.release <= 15 else 'c++'
@@ -246,38 +262,43 @@ eval:
         try: defines.remove(f)
         except ValueError: pass
 
-    properties = {
+    properties({
       'cxx.srcs': sources,
       'cxx.type': 'library',
       'cxx.preferredLinkage': 'static',
-      '!cxx.includes': include,
-      '!cxx.defines': defines,
-      '!cxx.exceptions': False,
-      '!cxx.rtti': options.rtti,
-      '!cxx.cppStd': 'c++11',
-      '!cxx.cppStdlib': 'libc++' if cxx.compiler.id == 'llvm' else None,
-      '!cxx.prefixHeaders': forced_includes,
-      '!cxx.compilerFlags': flags
-    }
+      '@cxx.includes': include,
+      '@cxx.defines': defines,
+      '@cxx.exceptions': False,
+      '@cxx.rtti': options.rtti,
+      '@cxx.cppStd': 'c++11',
+      '@cxx.cppStdlib': 'libc++' if cxx.compiler.id == 'llvm' else None,
+      '@cxx.prefixHeaders': forced_includes,
+      '@cxx.compilerFlags': flags
+    })
 
   else:
     raise EnvironmentError('no configuration for platform: {!r}'.format(platform))
 
-public target "sdk":
-  eval target.set_props(properties)
-  export cxx.combineCppSources = unitybuild
 
-target "legacy":
-  requires "@additional-includes"
-  requires "@sdk"
-  export cxx.defines = ['__LEGACY_API']
-  export cxx.prefixHeaders = ['include/craftr/c4d_legacy.h']
+@target(builders=[cxx.build])
+def addons():
+  """
+  This target can be depended upon to add additional include directories
+  for headers convenience headers provided by this build module.
+  """
 
-##
-# Find the Cinema 4D Python SDK.
-##
+  properties({'@cxx.includes': ['include']})
 
-eval:
+
+@target(builders=[cxx.build])
+def legacy():
+  depends(':addons')
+  depends(':sdk')
+  properties({'@cxx.defines': ['__LEGACY_API'], '@cxx.prefixHeaders': ['include/craftr/c4d_legacy.h']})
+
+
+@target(builders=[cxx.build])
+def python():
   if options.release >= 17:
     python_version = '2.7'
   elif options.release >= 12:
@@ -285,7 +306,6 @@ eval:
   else:
     python_version = None
 
-  properties = {}
   if python_version:
     if options.release >= 16:
       resource = path.join(dirs['resource'], 'modules', 'python')
@@ -310,10 +330,10 @@ eval:
       if not path.isdir(include):
         include = path.dir(include)
 
-      properties = {
-        '!cxx.includes': [include],
-        '!cxx.libraryPaths': [lib_path]
-      }
+      properties({
+        '@cxx.includes': [include],
+        '@cxx.libraryPaths': [lib_path]
+      })
 
     elif platform == 'mac':
       fw_path = path.join(resource, 'Python.osx.framework')
@@ -322,22 +342,19 @@ eval:
       lib_full_path = path.join(lib_path, lib)
       include = path.join(fw_path, 'include', 'python' + python_version)
 
-      properties = {
-        '!cxx.includes': [include],
-        '!cxx.staticLibraries': [lib_full_path]
-      }
+      properties({
+        '@cxx.includes': [include],
+        '@cxx.staticLibraries': [lib_full_path]
+      })
 
     elif platform == 'linux':
       # TODO: I THINK Cinema 4D comes with system Python? Gotta check.
-      properties = {
-        '!cxx.systemLibraries': 'python'
-      }
+      properties({
+        '@cxx.systemLibraries': 'python'
+      })
 
   else:
     # Don't do anything, the user will get an error that the "python" target
     # does not exist, and that is because Cinema 4D of that version doesn't
     # come with Python.
     pass
-
-target "python" if python_version:
-  eval target.set_props(properties)

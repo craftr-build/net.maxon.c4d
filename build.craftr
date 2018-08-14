@@ -26,6 +26,7 @@ import re
 import os, sys
 import cxx from 'net.craftr.lang.cxx'
 import {get_source_archive} from 'net.craftr.tool.download'
+from craftr.utils import sh
 
 project('net.maxon.c4d', '1.0-0')
 options.add('directory', str, '')
@@ -49,11 +50,11 @@ def get_c4d_path_and_release():
 
 
 def _init():
-  print(options)
   # Determine the Cinema 4D directory automatically or fallback to downloading
   # a Cinema 4D SDK source archive.
   if not options.directory:
     try:
+      if options.release: error()
       options.directory = get_c4d_path_and_release()[0]
     except ModuleError:
       if options.release:
@@ -85,7 +86,7 @@ else:
 
 if platform == 'win':
   plugin_suffix = '.cdl64' if cxx.compiler.is64bit else '.cdl'
-elif platform == 'darwin':
+elif platform == 'mac':
   plugin_suffix = '.dylib'
 elif platform == 'linux':
   plugin_suffix = '.so'
@@ -190,7 +191,7 @@ def sdk():
     })
 
   elif platform in ('mac', 'linux'):
-    stdlib = 'stdc++' if options.release <= 15 else 'c++'
+    stdlib = 'libstdc++' if options.release <= 15 else 'libc++'
 
     defines = []
     if platform == 'mac':
@@ -271,7 +272,7 @@ def sdk():
       '@cxx.exceptions': False,
       '@cxx.rtti': options.rtti,
       '@cxx.cppStd': 'c++11',
-      '@cxx.cppStdlib': 'libc++' if cxx.compiler.id == 'llvm' else None,
+      '@cxx.cppStdlib': stdlib if cxx.compiler.id == 'llvm' else None,
       '@cxx.prefixHeaders': forced_includes,
       '@cxx.compilerFlags': flags
     })

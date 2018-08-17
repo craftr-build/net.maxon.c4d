@@ -5,24 +5,39 @@
 
   [Craftr]: https://craftr.net
 
-&ndash; Build the Cinema 4D SDK and plugins with [Craftr 4][Craftr].
+&ndash; Build the Cinema 4D plugin with [Craftr 4][Craftr].
 
 __Contents__
 
 * [Features](#features)
+* [Todolist](#todolist)
 * [Configuration](#configuration)
 * [Version Matrix](#version-matrix)
 * [Example build script](#example-build-script)
+* [A note about R20](#a-note-about-r20)
 * [FAQ](#faq)
 * [Known Issues](#known-issues)
 
 ### Features
 
+- Supports Cinema 4D R12 &ndash; R20
 - Provides `__LEGACY_API` functionality for R17+
 - Compiles plugins on Windows (MSVC), macOS (Clang) and Linux (GCC)
 - Can automatically detect your Cinema 4D release and compiler version to
   adjust command-line flags accordingly (given that you installed Cinema 4D
   to a directory that is called `Cinema 4D RX.YYY`)
+
+### Todolist
+
+- R20 Source processor: Proper dependencies must be determined (eg. by
+  wrapping the command and writing the list of parsed files to a dependency
+  file) or it must be executed everytime
+- R20 projectdefinition: Handle more of the `projectdefinition.txt` properties
+- R20 Legacy: Provide a legacy API support header (for R19 and older plugin code)
+- R20 Linux: Plugin suffix? Compile flags/defines?
+- pre R20 Linux/Python: Check how we should link with Python (see `python` target)
+- pre R20 Linux: Plugin suffix is .so?
+- pre R20: ClangCL flags
 
 ### Configuration
 
@@ -36,6 +51,7 @@ __Contents__
 
 | Cinema 4D | Windows      | OSX               |
 | ----| ------------------ | ----------------- |
+| R20 | Visual Studio 2017 | Apple XCode 9 (?) |
 | R19 | Visual Studio 2015 | Apple XCode 8     |
 | R18 | Visual Studio 2013 | Apple XCode 7     |
 | R17 | Visual Studio 2013 | Apple XCode 6     |
@@ -51,10 +67,9 @@ Source: https://developers.maxon.net/?page_id=1108
 ```python
 project('myplugin', '1.0-0')
 
-cxx = require('net.craftr.lang.cxx')
 c4d = require('net.maxon.c4d')
 
-@target(builders=[cxx.build])
+@target(builders=[c4d.build])
 def plugin():
   depends('net.maxon.c4d:sdk')
   properties({
@@ -65,11 +80,27 @@ def plugin():
     'cxx.type': 'library',
     'cxx.preferredLinkage': 'shared'
   })
-
 ```
 
 Depend on the `net.maxon.c4d:legacy` target instead if your project uses
 old API (pre-R16).
+
+### A note about R20
+
+With R20, Maxon introduced a tool to produce project files from a
+`projectdefinitions.txt` file. Craftr supports building R20 projects
+*without* the MAXON Project Tool. Depending on the `net.maxon.c4d:sdk`
+target is no longer required and will do nothing (for backwards compatibility
+when building for previous Cinema 4D releases).
+
+Craftr can however take the following information from the
+`projectdefinitions.txt` into account:
+
+- `Platform` (validating if the current platform is supported)
+- `ModuleId` (alternatively with the `c4d.ModuleId` target property)
+- `APIS` (additively to the `c4d.APIS` target property)
+- `Type` (`Lib` or `DLL`, overriding the `cxx.type` and
+  `cxx.preferredLinkage` properties)
 
 ### FAQ
 

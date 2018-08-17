@@ -5,7 +5,7 @@
 
   [Craftr]: https://craftr.net
 
-&ndash; Build the Cinema 4D plugin with [Craftr 4][Craftr].
+&ndash; Build Cinema 4D plugins with [Craftr 4][Craftr].
 
 __Contents__
 

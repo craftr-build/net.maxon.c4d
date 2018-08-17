@@ -26,12 +26,10 @@ __Contents__
 - Can automatically detect your Cinema 4D release and compiler version to
   adjust command-line flags accordingly (given that you installed Cinema 4D
   to a directory that is called `Cinema 4D RX.YYY`)
+- Full R20 source processor support
 
 ### Todolist
 
-- R20 Source processor: Proper dependencies must be determined (eg. by
-  wrapping the command and writing the list of parsed files to a dependency
-  file) or it must be executed everytime
 - R20 projectdefinition: Handle more of the `projectdefinition.txt` properties
 - R20 Legacy: Provide a legacy API support header (for R19 and older plugin code)
 - R20 Linux: Plugin suffix? Compile flags/defines?

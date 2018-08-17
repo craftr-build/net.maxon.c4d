@@ -380,9 +380,9 @@ else:
   if not path.isdir(frameworks_dir):
     error('Frameworks directory not found. Did you unpack sdk.zip?')
 
-  sourceprocessor = [sys.executable, path.join(frameworks_dir, 'settings/sourceprocessor/sourceprocessor.py')]
-  if not path.isfile(sourceprocessor[1]):
-    error('Sourceprocessor not found at "{}"'.format(sourceprocessor[1]))
+  sourceprocessor_script = path.join(frameworks_dir, 'settings/sourceprocessor/sourceprocessor.py')
+  if not path.isfile(sourceprocessor_script):
+    error('Sourceprocessor not found at "{}"'.format(sourceprocessor_script))
 
   API_PLATFORM = {'win': 'Win64', 'mac': 'OSX', 'linux': 'Linux'}[platform]
 
@@ -502,13 +502,27 @@ else:
 
     [depends(get_framework(x), True) for x in APIS]
 
-    # TODO: How can we express that the register.cpp just MAY be regenerated
-    #       from the command but doesn't have to be?
-    #       We could also wrap the source processor and write a depfile of
-    #       of the files that it parsed.
     register_cpp = path.join(target.directory, 'generated/hxx/register.cpp')
-    operator('c4d.sourceprocessor', commands=[sourceprocessor + [target.directory]], restat=True)
-    build_set({}, {'out': register_cpp}, description='MAXON Source Preprocessor ({})'.format(target.directory))
+    depfile_name = register_cpp + '.d'
+
+    command = [
+      sys.executable,
+      str(require.resolve('./scripts/sourceprocessor-wrapper.py').filename),
+      sourceprocessor_script,
+      target.directory,
+      '--singlethreaded'
+    ]
+    for k, v in (target['c4d.stylecheck'] or {}).items():
+      command += ['--option', '{}={}'.format(k, v)]
+    operator(
+      'c4d.sourceprocessor',
+      commands=[command]
+    )
+    build_set(
+      {}, {'out': register_cpp},
+      description='MAXON Source Preprocessor ({})'.format(target.directory),
+      depfile = depfile_name
+    )
 
     target['cxx.srcs+'] = [register_cpp]
 

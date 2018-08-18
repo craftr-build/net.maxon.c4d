@@ -62,7 +62,6 @@ def main():
       for line in fp:
         line = line.strip()
         if line and line not in files:
-          print('  -',line)
           files.append(line)
 
   print('Writing dependencies file:', depfile)

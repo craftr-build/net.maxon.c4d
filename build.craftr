@@ -297,9 +297,11 @@ if options.release < 20:
 
   @target(builders=[cxx.build])
   def legacy():
-    depends(':addons')
-    depends(':sdk')
-    properties({'@cxx.defines': ['__LEGACY_API'], '@cxx.prefixHeaders': ['include/craftr/c4d_legacy.h']})
+    depends([':addons', ':sdk'], public=True)
+    properties({
+      '@cxx.defines': ['__LEGACY_API'],
+      '@cxx.prefixHeaders': ['include/NiklasRosenstein/maxon.c4d/c4d_legacy.h']
+    })
 
 
   @target(builders=[cxx.build])
@@ -556,7 +558,7 @@ else:
   depends(get_framework('cinema.framework'))
 
   target('legacy')
-  depends(':sdk')
+  depends([':addons', ':sdk'], public=True)
   # TODO: Provide legacy headers for R20 -> R19 commpatibility and
   #       make the include directory available in this target.
 

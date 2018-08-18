@@ -24,11 +24,14 @@
 import functools
 import re
 import os, sys
+import * from 'craftr'
 import cxx from 'net.craftr.lang.cxx'
 import {get_source_archive} from 'net.craftr.tool.download'
 from craftr.utils import sh
 
 project('net.maxon.c4d', '1.0-0')
+
+options = module.options
 options.add('directory', str, '')
 options.add('release', str, '')
 options.add('rtti', bool, False)
@@ -425,11 +428,11 @@ else:
     and returns it.
     """
 
-    if name in scope.targets:
-      return scope.targets[name]
+    if name in module.scope.targets:
+      return module.scope.targets[name]
     directory = path.join(frameworks_dir, name)
 
-    with target(name, scope=scope, ctx=True):
+    with target(name, scope=module.scope, ctx=True):
       properties({'this.directory': directory})
       properties({
         'c4d.APIS': [],

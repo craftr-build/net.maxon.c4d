@@ -88,6 +88,16 @@ else:
 release = options.release
 
 
+@target(builders=[cxx.build])
+def addons():
+  """
+  This target can be depended upon to add additional include directories
+  for headers convenience headers provided by this build module.
+  """
+
+  properties({'@cxx.includes': ['include']})
+
+
 if options.release < 20:
   if platform == 'win':
     plugin_suffix = '.cdl64' if cxx.compiler.is64bit else '.cdl'
@@ -286,16 +296,6 @@ if options.release < 20:
 
 
   @target(builders=[cxx.build])
-  def addons():
-    """
-    This target can be depended upon to add additional include directories
-    for headers convenience headers provided by this build module.
-    """
-
-    properties({'@cxx.includes': ['include']})
-
-
-  @target(builders=[cxx.build])
   def legacy():
     depends([':addons', ':sdk'], public=True)
     properties({
@@ -391,7 +391,7 @@ else:
   session.target_props.add('c4d.APIS', 'StringList', None)
   session.target_props.add('c4d.stylecheck', 'Dict', None, optional=True)
   session.target_props.add('c4d.ModuleId', 'String', None)
-  session.target_props.add('c4d.projectdefinition', 'Path', 'project/projectdefinition.txt')
+  session.target_props.add('c4d.projectdefinition', 'Path', optional=True)
 
   def parse_projectdefinition(filename):
     """
@@ -470,7 +470,12 @@ else:
     data = target.get_props('c4d.', as_object=True)
 
     APIS = target['c4d.APIS']
-    projectdefinition = target['c4d.projectdefinition']
+    if not target.properties.is_set('c4d.projectdefinition'):
+      projectdefinition = path.join(target.directory, 'project/projectdefinition.txt')
+      if not path.isfile(projectdefinition):
+        projectdefinition = None
+    else:
+      projectdefinition = target['c4d.projectdefinition']
     if projectdefinition:
       def warn(*msg):
         print('[WARNING {}]: "{}":'.format(target.id, projectdefinition), *msg)

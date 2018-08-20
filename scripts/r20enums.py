@@ -88,7 +88,6 @@ def main(argv=None, prog=None):
   elif args.format == 'legacy-header':
     print('/* Auto-generated using r20enums.py */')
     print('#pragma once')
-    print('#include <operatingsystem.h>')
     print('#if API_VERSION >= 20000')
     for enum in data:
       print()

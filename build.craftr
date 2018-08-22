@@ -34,6 +34,7 @@ project('net.maxon.c4d', '1.0-0')
 options = module.options
 options.add('directory', str, '')
 options.add('release', str, '')
+options.add('getsdk', bool, False)
 options.add('rtti', bool, False)
 
 
@@ -55,7 +56,7 @@ def get_c4d_path_and_release():
 def _init():
   # Determine the Cinema 4D directory automatically or fallback to downloading
   # a Cinema 4D SDK source archive.
-  if not options.directory:
+  if not options.directory or options.getsdk:
     try:
       if options.release: error()
       options.directory = get_c4d_path_and_release()[0]
@@ -303,10 +304,10 @@ if release < 20:
 
   @target(builders=[cxx.build])
   def legacy():
-    depends([':addons', ':sdk'], public=True)
+    depends([':sdk'], public=True)
     properties({
       '@cxx.defines': ['__LEGACY_API'],
-      '@cxx.prefixHeaders': ['include/NiklasRosenstein/maxon.c4d/c4d_legacy.h']
+      '@cxx.prefixHeaders': ['include/c4d_legacy.h']
     })
 
   @target(builders=[cxx.build])

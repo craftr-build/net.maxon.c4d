@@ -23,7 +23,7 @@
 #if API_VERSION < 20000
   inline String operator "" _s(char const* s, size_t l) {
     String result(l, 0);
-    for (UInt i = 0; i < l; +=i) result[i] = s[i];
+    for (UInt i = 0; i < l; ++i) result[i] = s[i];
     return result;
   }
 #endif
@@ -72,11 +72,8 @@
   #define ENUM_END_FLAGS(x) MAXON_ENUM_FLAGS(x)
 #endif
 
-/**
- * AutoNew, AutoPtr, AutoGeFree
- *
- * From the R19 SDK with adjustments.
- */
+// AutoNew, AutoPtr, AutoGeFree
+// From the R19 SDK with adjustments.
 #if API_VERSION >= 20000
 
   //----------------------------------------------------------------------------------------
@@ -305,9 +302,14 @@
 
 #endif
 
-/**
- * GetMacAddress
- */
+// GetVector3
+#if API_VERSION >= 20000
+  inline Vector GetVector3(Vector4d const& v) {
+    return v.GetVector3();
+  }
+#endif
+
+// GetMacAddress
 #if API_VERSION >= 20000
   #include <maxon/network_ip.h>
   inline Bool GetMacAddress(maxon::BaseArray<UChar>& macAddress) {
@@ -432,11 +434,11 @@ namespace c4d_apibridge {
     #endif
   }
 
-  inline Vector GetVector3(Vector4d const& v) {
+  inline void Normalize(Matrix& m) {
     #if API_VERSION >= 20000
-      return v.GetVector3();
+        m = m.GetNormalized();
     #else
-      return ::GetVector3(v);
+        m.Normalize();
     #endif
   }
 
@@ -492,7 +494,7 @@ namespace c4d_apibridge {
     #define PRIVATE_C4D_APIBRIDGE_HASHMAP_SUPER maxon::HashMap<K, V, HASH, GET_KEY, ALLOCATOR, false>
     #define PRIVATE_C4D_APIBRIDGE_HASHMAP_DEFAULTHASH maxon::DefaultCompare
   #else
-    #define PRIVATE_C4D_APIBRIDGE_HASHMAP_SUPER maxon::HashMap<K, V, HASH, GET_KEY, ALLOCATOR, false>
+    #define PRIVATE_C4D_APIBRIDGE_HASHMAP_SUPER maxon::HashMap<K, V, HASH, GET_KEY, ALLOCATOR>
     #define PRIVATE_C4D_APIBRIDGE_HASHMAP_DEFAULTHASH maxon::DefaultHash
   #endif
 
@@ -550,7 +552,8 @@ namespace c4d_apibridge {
 #include "c4d_apibridge_enums.h"
 
 
-#if 0
+
+
 /**
  * @macro C4D_APIBRIDGE_CONCAT(a, b)
  *
@@ -565,49 +568,69 @@ namespace c4d_apibridge {
  * R19: Substitutes that behave the same as the R20 macros provided by the Maxon SDK.
  * R20: Defined by the Maxon SDK.
  */
-#if !C4D_APIBRIDGE_R20
+#if API_VERSION < 20000
+
+  // Note: If you include any other C4D API headers after this one and that
+  // C4D API header uses their own iferr()/ifnoerr(), you may need to include
+  // the header before the c4d_apibridge.
+  #ifdef iferr
+    #undef iferr
+  #endif
+  #ifdef ifnoerr
+    #undef ifnoerr
+  #endif
+
   #define PRIVATE_iferr_handler_(ErrType, ErrName, ...) \
-    c4ddual::ErrType ErrName; \
-    __VA_ARGS__ % Errname; \
+    c4d_apibridge::detail::ErrType ErrName; \
+    __VA_ARGS__ % ErrName; \
     if (ErrName.Catch())
   #define iferr(...) PRIVATE_iferr_handler_(Error, C4D_APIBRIDGE_CONCAT(tmperr_, __COUNTER__), __VA_ARGS__)
   #define ifnoerr(...) PRIVATE_iferr_handler_(NoError, C4D_APIBRIDGE_CONCAT(tmperr_, __COUNTER__), __VA_ARGS__)
-#endif
 
-/**
- * @class Error, @class NoError
- *
- * Classes used for the @ref iferr and @ref ifnoerr macros.
- */
-#if !C4D_APIBRIDGE_R20
-namespace c4ddual {
-  class Error {
-  protected:
-    Bool _ok = false;
-  public:
-    inline Bool Catch() const { return !_ok; }
-    template <typename T>
-    friend inline T operator % (T*&& value, Error const& self) {
-      _ok = (value != nullptr);
-      return std::forward<T>(value);
-    }
-  };
-  class NoError : public Error {
-  protected:
-    inline Bool Catch() const { return _ok; }
-  };
-}
-#endif
+  namespace c4d_apibridge {
+  namespace detail {
 
-/**
- * @func operator % ()
- *
- * Error-handling operators for the @ref iferr and @ref iferrno macros
- * when using expressions that return a pointers instead of a #maxon::Result.
- * This is possible in R19 with our implementation of @ref iferr and
- * @ref iferrno, thus it is important we make it possible in R20 as well.
- */
-#if C4D_APIBRIDGE_R20
+    class Error {
+    protected:
+      Bool _ok = false;
+    public:
+      inline Bool Catch() const { return !_ok; }
+
+      template <typename T>
+      friend inline T& operator % (T*&& value, Error& self) {
+        if (value) {
+          self._ok = true;
+          return *std::forward<T*>(value);
+        }
+        else {
+          self._ok = false;
+          return *(T*)nullptr;
+        }
+      }
+
+      friend inline Bool operator %(Bool const& value, Error& self) {
+        self._ok = value;
+        return value;
+      }
+
+    };
+    class NoError : public Error {
+    public:
+      inline Bool Catch() const { return _ok; }
+    };
+  }
+  }
+
+#else
+
+  /**
+  * @func operator % ()
+  *
+  * Error-handling operators for the @ref iferr and @ref iferrno macros
+  * when using expressions that return a pointers instead of a #maxon::Result.
+  * This is possible in R19 with our implementation of @ref iferr and
+  * @ref iferrno, thus it is important we make it possible in R20 as well.
+  */
   template <typename T>
   inline T* operator %(T*&& value, maxon::ThreadReferencedError& err) {
     if (MAXON_LIKELY(value != nullptr)) {
@@ -625,6 +648,5 @@ namespace c4ddual {
     err = CreateErrorPtr(MAXON_SOURCE_LOCATION, maxon::ERROR_TYPE::OUT_OF_MEMORY);
     return nullptr;
   }
-#endif
 
 #endif

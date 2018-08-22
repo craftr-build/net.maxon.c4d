@@ -41,6 +41,10 @@ R20_RENAMES = {
   },
   'USERAREAFLAGS': {
     '$name': 'USERAREA'
+  },
+  'UNDOTYPE': {
+    'NEWOBJ': 'NEW',
+    'DELETEOBJ': 'DELETE'
   }
 }
 

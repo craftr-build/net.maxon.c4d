@@ -17,9 +17,10 @@
 #include <c4d_falloffdata.h>
 #include <vector4.h>
 
-/**
- * operator "" _s
- */
+#define C4D_APIBRIDGE_CONCAT(x, y) PRIVATE_C4D_APIBRIDGE_CONCAT(x, y)
+#define PRIVATE_C4D_APIBRIDGE_CONCAT(x, y) x##y
+
+// operator "" _s
 #if API_VERSION < 20000
   inline String operator "" _s(char const* s, size_t l) {
     String result(l, 0);
@@ -28,36 +29,28 @@
   }
 #endif
 
-/**
- * GePrint
- */
+// GePrint
 #if API_VERSION >= 20000
   inline void GePrint(char const* s) {
     GePrint(maxon::String(s));
   }
 #endif
 
-/**
- * MessageDialog
- */
+// MessageDialog
 #if API_VERSION >= 20000
   inline void MessageDialog(char const* s) {
     MessageDialog(maxon::String(s));
   }
 #endif
 
-/**
- * StatusSetText
- */
+// StatusSetText
 #if API_VERSION >= 20000
   inline void StatusSetText(char const* s) {
     StatusSetText(String(s));
   }
 #endif
 
-/**
- * Deg, Rad
- */
+// Deg, Rad
 #if API_VERSION >= 20000
   inline Float32 Deg(Float32 r) { return maxon::RadToDeg(r); }
   inline Float64 Deg(Float64 r) { return maxon::RadToDeg(r); }
@@ -65,9 +58,7 @@
   inline Float64 Rad(Float64 r) { return maxon::DegToRad(r); }
 #endif
 
-/**
- * ENUM_END_FLAGS
- */
+// ENUM_END_FLAGS
 #if API_VERSION >= 20000
   #define ENUM_END_FLAGS(x) MAXON_ENUM_FLAGS(x)
 #endif
@@ -321,6 +312,11 @@
   }
 #endif
 
+// maxon::String
+#if API_VERSION < 20000
+  namespace maxon { using String = ::String; }
+#endif
+
 namespace c4d_apibridge {
 
   // ==== Result Unpacking
@@ -543,31 +539,7 @@ namespace c4d_apibridge {
 
 }
 
-#if API_VERSION >= 20000
-  #ifdef CUSTOMTYPE_HIDE_ID
-    #undef CUSTOMTYPE_HIDE_ID
-  #endif
-#endif
-
-#include "c4d_apibridge_enums.h"
-
-
-
-
-/**
- * @macro C4D_APIBRIDGE_CONCAT(a, b)
- *
- * Concatenates two names.
- */
-#define C4D_APIBRIDGE_CONCAT(x, y) PRIVATE_C4D_APIBRIDGE_CONCAT(x, y)
-#define PRIVATE_C4D_APIBRIDGE_CONCAT(x, y) x##y
-
-/**
- * @macro iferr(...), ifnoerr(...)
- *
- * R19: Substitutes that behave the same as the R20 macros provided by the Maxon SDK.
- * R20: Defined by the Maxon SDK.
- */
+// iferr(), ifnoerr() for R19
 #if API_VERSION < 20000
 
   // Note: If you include any other C4D API headers after this one and that
@@ -650,3 +622,11 @@ namespace c4d_apibridge {
   }
 
 #endif
+
+#if API_VERSION >= 20000
+  #ifdef CUSTOMTYPE_HIDE_ID
+    #undef CUSTOMTYPE_HIDE_ID
+  #endif
+#endif
+
+#include "c4d_apibridge_enums.h"

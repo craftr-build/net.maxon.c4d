@@ -209,7 +209,7 @@ inline Float64 FCut01(Float64 a)	{ return Clamp01(a); }
 #define C4D_MISC_MOVE_TYPE(T)					T&&
 #define C4D_MISC_MOVE_BASE_CLASS(src, ...)	__VA_ARGS__(std::move(src))
 
-#define gNew(x) NewObj(x)
+#define gNew(x) NewObjClear(x)
 
 #ifdef MAXON_TARGET_64BIT
 	#define __C4D_64BIT

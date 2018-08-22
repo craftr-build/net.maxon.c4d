@@ -98,10 +98,13 @@ def addons():
   for headers convenience headers provided by this build module.
   """
 
-  properties({'@cxx.includes': ['include']})
+  properties({
+    '@cxx.includes': ['include'],
+    '@cxx.defines': ['CRAFTR_NET_MAXON_C4D_ISR20'] if release >= 20 else []
+  })
 
 
-if options.release < 20:
+if release < 20:
   if platform == 'win':
     plugin_suffix = '.cdl64' if cxx.compiler.is64bit else '.cdl'
   elif platform == 'mac':
@@ -142,7 +145,7 @@ if options.release < 20:
       dirs['source'] + '/c4d_scaling',
       dirs['resource'] + '/res/description'
     ]
-    if options.release <= 15:
+    if release <= 15:
       include += glob(['modules/*/res/description'], parent = dirs['resource'])
       include += glob(['modules/*/res/description'], parent = dirs['c4d'])
       include += glob(['modules/*/*/res/description'], parent = dirs['c4d'])
@@ -156,7 +159,7 @@ if options.release < 20:
 
     if platform == 'win':
       defines = ['__PC']
-      if options.release >= 15:
+      if release >= 15:
         defines += ['MAXON_API', 'MAXON_TARGET_WINDOWS']
         defines += ['MAXON_TARGET_DEBUG'] if BUILD.debug else ['MAXON_TARGET_RELEASE']
         if cxx.compiler.is64bit:
@@ -208,21 +211,21 @@ if options.release < 20:
       })
 
     elif platform in ('mac', 'linux'):
-      stdlib = 'libstdc++' if options.release <= 15 else 'libc++'
+      stdlib = 'libstdc++' if release <= 15 else 'libc++'
 
       defines = []
       if platform == 'mac':
         defines += ['C4D_COCOA', '__MAC']
-        if options.release >= 15:
+        if release >= 15:
           defines += ['MAXON_TARGET_OSX']
       elif platform == 'linux':
         defines += ['__LINUX']
-        if options.release >= 15:
+        if release >= 15:
           defines += ['MAXON_TARGET_LINUX']
       else:
         assert False
 
-      if options.release >= 15:
+      if release >= 15:
         defines += ['MAXON_API']
         defines += ['MAXON_TARGET_DEBUG'] if BUILD.debug else ['MAXON_TARGET_RELEASE']
         defines += ['MAXON_TARGET_64BIT']
@@ -230,7 +233,7 @@ if options.release < 20:
         defines += ['_DEBUG', 'DEBUG'] if BUILD.debug else ['NDEBUG']
         defines += ['__C4D_64BIT']
 
-      if options.release <= 15:
+      if release <= 15:
         flags = sh.split('''
           -fmessage-length=0 -Wno-trigraphs -Wno-missing-field-initializers
           -Wno-non-virtual-dtor -Woverloaded-virtual -Wmissing-braces -Wparentheses
@@ -271,7 +274,7 @@ if options.release < 20:
           -Wno-multichar -Wno-strict-aliasing -Wno-shadow -Wno-conversion-null''')
 
       forced_includes = []
-      if platform == 'mac' and options.release <= 15:
+      if platform == 'mac' and release <= 15:
         if BUILD.debug:
           forced_includes = [path.join(dirs['source'], 'ge_mac_debug_flags.h')]
         else:
@@ -306,18 +309,17 @@ if options.release < 20:
       '@cxx.prefixHeaders': ['include/NiklasRosenstein/maxon.c4d/c4d_legacy.h']
     })
 
-
   @target(builders=[cxx.build])
   def python():
-    if options.release >= 17:
+    if release >= 17:
       python_version = '2.7'
-    elif options.release >= 12:
+    elif release >= 12:
       python_version = '2.6'
     else:
       python_version = None
 
     if python_version:
-      if options.release >= 16:
+      if release >= 16:
         resource = path.join(dirs['resource'], 'modules', 'python')
       else:
         resource = path.join(dirs['resource'], 'modules', 'python', 'res')
@@ -394,7 +396,7 @@ else:
   session.target_props.add('c4d.APIS', 'StringList', None)
   session.target_props.add('c4d.stylecheck', 'Dict', None, optional=True)
   session.target_props.add('c4d.ModuleId', 'String', None)
-  session.target_props.add('c4d.projectdefinition', 'Path', optional=True)
+  session.target_props.add('c4d.SourceProcessor', 'Bool', True)
 
   def parse_projectdefinition(filename):
     """
@@ -434,10 +436,7 @@ else:
 
     with target(name, scope=module.scope, ctx=True):
       properties({'this.directory': directory})
-      properties({
-        'c4d.APIS': [],
-        'c4d.projectdefinition': 'project/projectdefinition.txt'
-      })
+      properties({'c4d.APIS': []})
 
       if name == 'core.framework':
         properties({
@@ -473,19 +472,14 @@ else:
     data = target.get_props('c4d.', as_object=True)
 
     APIS = target['c4d.APIS']
-    if not target.properties.is_set('c4d.projectdefinition'):
-      projectdefinition = path.join(target.directory, 'project/projectdefinition.txt')
-      if not path.isfile(projectdefinition):
-        projectdefinition = None
-    else:
-      projectdefinition = target['c4d.projectdefinition']
-    if projectdefinition:
+    projectdefinition = path.join(target.directory, 'project/projectdefinition.txt')
+    if path.isfile(projectdefinition):
       def warn(*msg):
         print('[WARNING {}]: "{}":'.format(target.id, projectdefinition), *msg)
       defs = parse_projectdefinition(projectdefinition)
       if 'Platform' in defs and API_PLATFORM not in defs['Platform'].split(';'):
         warn('does not support platform "{}"'.format(API_PLATFORM))
-      if 'Type' in defs:
+      if 'Type' in defs and not target.properties.is_set('cxx.type'):
         if defs['Type'] == 'Lib':
           target['cxx.type'] = 'library'
           target['cxx.preferredLinkage'] = 'static'
@@ -516,38 +510,62 @@ else:
     elif APIS is None:
       APIS = ['cinema.framework']
 
-    [depends(get_framework(x), True) for x in APIS]
+    [depends(get_framework(x), True) for x in APIS or ()]
 
-    register_cpp = path.join(target.directory, 'generated/hxx/register.cpp')
-    depfile_name = register_cpp + '.d'
+    module_id = target['c4d.ModuleId']
+    if not module_id:
+      error('[{}] no c4d.ModuleId'.format(target.id))
 
-    command = [
-      sys.executable,
-      str(require.resolve('./scripts/sourceprocessor-wrapper.py').filename),
-      sourceprocessor_script,
-      target.directory,
-      '--singlethreaded'
-    ]
-    for k, v in (target['c4d.stylecheck'] or {}).items():
-      command += ['--option', '{}={}'.format(k, v)]
-    operator(
-      'c4d.sourceprocessor',
-      commands=[command]
-    )
-    build_set(
-      {}, {'out': register_cpp},
-      description='MAXON Source Preprocessor ({})'.format(target.directory),
-      depfile = depfile_name
-    )
+    if target['c4d.SourceProcessor']:
+      register_cpp = path.join(target.directory, 'generated/hxx/register.cpp')
+      depfile_name = register_cpp + '.d'
 
-    target['cxx.srcs+'] = [register_cpp]
+      command = [
+        sys.executable,
+        str(require.resolve('./scripts/sourceprocessor-wrapper.py').filename)
+      ]
 
-    if target.properties.is_set('c4d.ModuleId'):
-      properties({
-        'cxx.defines+': ['MAXON_MODULE_ID="' + target['c4d.ModuleId'] + '"']
-      })
-    else:
-      print('[WARNING {}]: No Maxon Module ID set.'.format(target.id))
+      if not path.isfile(projectdefinition):
+        print('[WARNING]: "{}" does not exist. Craftr will write a temporary '
+              'version of it during the build process.'.format(projectdefinition))
+        command += ['--write-temp-projectdefinition']
+        command += ['--module-id', module_id]
+        command += ['--type', 'Dll']  # TODO: Use Lib if we're actually using Lib
+
+      command += [
+        sourceprocessor_script,
+        target.directory,
+        '--',
+        '--singlethreaded'
+      ]
+      for k, v in (target['c4d.stylecheck'] or {}).items():
+        command += ['--option', '{}={}'.format(k, v)]
+
+      operator(
+        'c4d.sourceprocessor',
+        commands=[command]
+      )
+      build_set(
+        {}, {'out': register_cpp},
+        description='MAXON Source Preprocessor ({})'.format(target.directory),
+        depfile = depfile_name
+      )
+      target['cxx.srcs+'] = [register_cpp]
+
+      # Run the source processor at least once immediately.
+      # This is a workaround for Cinema frameworks for which the
+      # processor yields additional header files which are then
+      # included by standard headers in the framework.
+      # Currently we have no dependency that we can introduce between
+      # running the source processor and the use of these headers in
+      # other translation units.
+      if not path.isdir(path.join(target.directory, 'generated')):
+        from craftr.utils import sh
+        sh.run(command)
+
+    properties({
+      'cxx.defines+': ['MAXON_MODULE_ID="' + module_id + '"']
+    })
 
     if not target.properties.is_set('cxx.cppStd'):
       if cxx.compiler.id == 'msvc':
@@ -563,15 +581,28 @@ else:
       target['cxx.msvcCompilerFlags+'] = ['/Gy', '/RTC1']
       target['cxx.msvcConformance+'] = ['wchar_t']
 
+    if cxx.compiler.id != 'msvc' or 'clang' in cxx.compiler.name.lower():
+      target['cxx.compilerFlags+'] = ['-msse4.2']
+
     cxx.build()
 
+  module.scope.targets['addons'].add_dependency(get_framework('network.framework'), public=True)
+
   target('sdk')
-  depends(get_framework('cinema.framework'))
+  depends(get_framework('cinema.framework'), public=True)
 
   target('legacy')
   depends([':addons', ':sdk'], public=True)
   # TODO: Provide legacy headers for R20 -> R19 commpatibility and
   #       make the include directory available in this target.
 
+  import python from 'net.craftr.lang.python'
+  if python.cfg['VERSION'] != '27':
+    print('[WARNING]: Using net.maxon.c4d:python can result in '
+          'compile and/or link errors, the Python version found '
+          'on the system is {} but require 27 for Cinema 4D.'.format(python.cfg['VERSION']))
+
+
   target('python')
-  depends(get_framework('python.framework'))
+  depends(get_framework('python.framework'), public=True)
+  depends('net.craftr.lang.python:python', public=True)

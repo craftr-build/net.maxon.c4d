@@ -27,30 +27,61 @@ dependency file for the files that have been parsed to produce the
 generated files.
 """
 
+import argparse
 import os
+import nr.fs
 import subprocess as sp
+import shutil
 import sys
 
 escape = lambda x: x.replace(' ', '\\ ')
 
 def main():
-  sourceprocessor = sys.argv[1]
-  directory = sys.argv[2]
-  argv = [directory] + sys.argv[3:]
+  parser = argparse.ArgumentParser()
+  parser.add_argument('sourceprocessor', help='Path to the sourceprocessor.py')
+  parser.add_argument('directory', help='The directory to process.')
+  parser.add_argument('--write-temp-projectdefinition', action='store_true')
+  parser.add_argument('--module-id')
+  parser.add_argument('--type')
+  parser.add_argument('argv', nargs='...')
+  args = parser.parse_args()
 
-  proc = sp.Popen([sys.executable, sourceprocessor] + argv, stdout=sp.PIPE, stderr=sp.STDOUT)
-  files = []
-  for line in proc.stdout:
-    line = line.decode()
-    print(line, end='')
-    line = line.strip()
-    if line.startswith('Parsing') and line.endswith('...'):
-      files.append(line[7:-3].strip())
-  proc.communicate()
+  projectdefs = os.path.join(args.directory, 'project', 'projectdefinition.txt')
+  remove_project_dir = False
+  if args.write_temp_projectdefinition and not os.path.isfile(projectdefs):
+    print('Creating temporary projectdefinitions.txt...')
+    remove_project_dir = not os.path.isdir(os.path.dirname(projectdefs))
+    nr.fs.makedirs(os.path.dirname(projectdefs))
+    with open(projectdefs, 'w') as fp:
+      if args.type:
+        print('Type={}'.format(args.type), file=fp)
+      if args.module_id:
+        print('ModuleId={}'.format(args.module_id), file=fp)
+      print('stylecheck=false'.format(args.type), file=fp)
 
-  registercpp = os.path.join(directory, 'generated', 'hxx', 'register.cpp')
-  depfile = os.path.join(directory, 'generated', 'hxx', 'register.cpp.d')
-  cachefile = os.path.join(directory, 'generated', 'craftr-depscache.txt')
+  try:
+    proc = sp.Popen([sys.executable, args.sourceprocessor, args.directory] + args.argv, stdout=sp.PIPE, stderr=sp.STDOUT)
+    files = []
+    for line in proc.stdout:
+      line = line.decode()
+      print(line, end='')
+      line = line.strip()
+      if line.startswith('Parsing') and line.endswith('...'):
+        files.append(line[7:-3].strip())
+    proc.communicate()
+  finally:
+    if args.write_temp_projectdefinition:
+      if remove_project_dir:
+        shutil.rmtree(os.path.dirname(projectdefs))
+      else:
+        os.remove(projectdefs)
+
+  registercpp = os.path.join(args.directory, 'generated', 'hxx', 'register.cpp')
+  if not os.path.isfile(registercpp):
+    return
+
+  depfile = os.path.join(args.directory, 'generated', 'hxx', 'register.cpp.d')
+  cachefile = os.path.join(args.directory, 'generated', 'craftr-depscache.txt')
 
   # Parse in the previous file list. The source processor only outputs the
   # files that it parses because they are new or changed, not the unchaged

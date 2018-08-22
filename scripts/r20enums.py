@@ -33,6 +33,18 @@ import os
 import re
 import sys
 
+# Maps the R20 enum and symbol name to the respective R19 enum or symbol name.
+# Note: This mapping is incomplete.
+R20_RENAMES = {
+  'DRAWRESULT': {
+    'FAILURE': 'ERROR'
+  },
+  'USERAREAFLAGS': {
+    '$name': 'USERAREA'
+  }
+}
+
+
 def parse_header_enums(filename):
   with open(filename, encoding='utf8') as fp:
     scanner = nr.parse.Scanner(fp.read())
@@ -66,7 +78,7 @@ def get_argument_parser(prog=None):
   )
   parser.add_argument(
     '-f', '--format',
-    choices=['json', 'legacy-header'],
+    choices=['json', 'legacy.h'],
     help='Output the enum data in one of the specified formats.'
   )
   return parser
@@ -85,7 +97,7 @@ def main(argv=None, prog=None):
 
   if args.format == 'json':
     json.dump(data, sys.stdout)
-  elif args.format == 'legacy-header':
+  elif args.format == 'legacy.h':
     print('/* Auto-generated using r20enums.py */')
     print('#pragma once')
     print('#if API_VERSION >= 20000')
@@ -94,8 +106,15 @@ def main(argv=None, prog=None):
       print('// enum class {} from "{}" line {}'.format(enum['name'],
         os.path.basename(enum['def']['filename']), enum['def']['line']))
       for sym, _ in enum['symbols']:
-        assign_to = enum['name'] + '_' + ('0' if sym == 'NONE' else sym)
-        print('#define {} ({}::{})'.format(assign_to, enum['name'], sym))
+        trnl = R20_RENAMES.get(enum['name'], {})
+        dest_enum = trnl.get('$name', enum['name'])
+        dest_sym = trnl.get(sym, sym)
+        print('#define {0}_{1} ({2}::{3})'.format(dest_enum, dest_sym, enum['name'], sym))
+        if dest_sym == 'NONE':
+          # Most, but not ALL, _0 flags have been renamed to NONE.
+          # But we can't just create just the _0 define because the
+          # R19 flag may actually use _NONE.
+          print('#define {0}_0 ({1}::{2})'.format(dest_enum, enum['name'], sym))
     print()
     print('#endif  // if API_VERSION >= 20000')
 

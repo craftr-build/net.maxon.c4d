@@ -312,12 +312,13 @@
   }
 #endif
 
-// maxon::String
-#if API_VERSION < 20000
-  namespace maxon { using String = ::String; }
-#endif
-
 namespace c4d_apibridge {
+
+  #if API_VERSION >= 20000
+    using String = maxon::String;
+  #else
+    using String = ::String;
+  #endif
 
   // ==== Result Unpacking
   // =====================

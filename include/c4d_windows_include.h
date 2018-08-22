@@ -17,4 +17,8 @@
 #pragma pop_macro("LONG")
 #pragma pop_macro("ULONG")
 
+#if CRAFTR_NET_MAXON_C4D_ISR20
+  #include <undef_win_macros.h>
+#endif
+
 #endif // WINDOWS_INCLUDE_H__

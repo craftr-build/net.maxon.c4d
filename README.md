@@ -10,6 +10,7 @@
 __Contents__
 
 * [Features](#features)
+* [Legacy / Bridge API](#legacy--dual-api)
 * [Todolist](#todolist)
 * [Configuration](#configuration)
 * [Version Matrix](#version-matrix)
@@ -20,13 +21,48 @@ __Contents__
 
 ### Features
 
-- Supports Cinema 4D R12 &ndash; R20
-- Provides `__LEGACY_API` functionality for R17+
+- Supports compiling plugins for Cinema 4D R12 &ndash; R20
+- Provides legacy / dual API headers <sup>1) More info below</sup>
 - Compiles plugins on Windows (MSVC), macOS (Clang) and Linux (GCC)
 - Can automatically detect your Cinema 4D release and compiler version to
   adjust command-line flags accordingly (given that you installed Cinema 4D
   to a directory that is called `Cinema 4D RX.YYY`)
 - Full R20 source processor support
+
+### Legacy / Bridge API
+
+Many names Cinema 4D SDK changed drastically with R15. Maxon provided a
+`__LEGACY_API` preprocessor switch that enabled most of the old names.
+This legacy API switch was officially discontinued with R17.
+
+This Craftr module provides the old C4D legacy API header as `<c4d_legacy.h>`
+and is made available if you depend on the `net.maxon.c4d:addons` target.
+You can instead depend on the `net.maxon.c4d:legacy` target and won't even
+need to add the `<c4d_legacy.h>` header as includes to your source files.
+
+---
+
+The R16 SDK uses `#define override` on Windows which is actually invalid
+and Visual Studio 2015 (aka. 14.0) complains about this. This directory
+contains file(s) that can be replaced in the R16 SDK to fix this issue, or
+alternatively a forced-include could be used which would disable the inclusion
+of the original `r16_compilerdetection_fix.h`.
+
+---
+
+With **R20**, the Cinema 4D SDK changed drastically. Most prominent are the
+changes to enumerations. which all changed to `enum class` declarations.
+Macros like `NewObj()`/`NewMem()` and functions like `String::GetCStringCopy()`
+return a `maxon::ResultPtr<T>` instead of a raw pointer which can not be
+implicitly cast to the type `T*`, rendering all existing code using these
+functions invalid.
+
+This Craftr module provides a **bridge API** &ndash; meaning that it is a new
+and separate API that is compatible with the pre-R20 and R20 SDK. This API
+must be explicitly included with the `<c4d_apibridge.h>` header. This API does
+provide the pre-R20 enumerations (generated using the `scripts/r20enums.py`
+script) but encrouages use of API that is more similar to R20 (eg. aims to
+provide R19 compatible `iferr()` and `ifnoerr()` macros).
 
 ### Todolist
 

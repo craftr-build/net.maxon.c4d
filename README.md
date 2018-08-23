@@ -31,27 +31,30 @@ __Contents__
 
 ### Legacy / Bridge API
 
-Many names Cinema 4D SDK changed drastically with R15. Maxon provided a
-`__LEGACY_API` preprocessor switch that enabled most of the old names.
-This legacy API switch was officially discontinued with R17.
+Many symbol names in the C4D SDK changed drastically in R15. Maxon provided a
+`__LEGACY_API` preprocessor switch that enabled most of the old names, however
+that switch is discontinued since R17.
 
-This Craftr module provides the old C4D legacy API header as `<c4d_legacy.h>`
-and is made available if you depend on the `net.maxon.c4d:addons` target.
-You can instead depend on the `net.maxon.c4d:legacy` target and won't even
-need to add the `<c4d_legacy.h>` header as includes to your source files.
+This Craftr module provides the old C4D legacy API header as `<c4d_legacy.h>`,
+which allows you to use much of the old API even in R17 to R19. It will be
+available by adding the `net.maxon.c4d:addons` target to your plugins'
+dependencies.
+
+You can also depend on the `net.maxon.c4d:legacy` target instead which will
+add the `c4d_legacy.h` as a prefix header, thus you won't need to manually
+add this include to all source files.
 
 ---
 
 The R16 SDK uses `#define override` on Windows which is actually invalid
-and Visual Studio 2015 (aka. 14.0) complains about this. This directory
-contains file(s) that can be replaced in the R16 SDK to fix this issue, or
-alternatively a forced-include could be used which would disable the inclusion
-of the original `r16_compilerdetection_fix.h`.
+and Visual Studio 2015 (aka. 14.0) complains about this. We provide a
+`<r16_compilerdetection_fix.h>` header (depend on `net.maxon.c4d:addons`)
+that has this error fixed.
 
 ---
 
 With **R20**, the Cinema 4D SDK changed drastically. Most prominent are the
-changes to enumerations. which all changed to `enum class` declarations.
+changes to enumerations which all changed to `enum class` declarations.
 Macros like `NewObj()`/`NewMem()` and functions like `String::GetCStringCopy()`
 return a `maxon::ResultPtr<T>` instead of a raw pointer which can not be
 implicitly cast to the type `T*`, rendering all existing code using these
@@ -59,19 +62,18 @@ functions invalid.
 
 This Craftr module provides a **bridge API** &ndash; meaning that it is a new
 and separate API that is compatible with the pre-R20 and R20 SDK. This API
-must be explicitly included with the `<c4d_apibridge.h>` header. This API does
-provide the pre-R20 enumerations (generated using the `scripts/r20enums.py`
-script) but encrouages use of API that is more similar to R20 (eg. aims to
-provide R19 compatible `iferr()` and `ifnoerr()` macros).
+must be explicitly included with the `<c4d_apibridge.h>` header. It provides
+the pre-R20 enumerations (generated using the `scripts/r20enums.py` script)
+but encrouages use of API that is more similar to R20 (eg. aims to provide R19
+compatible `iferr()` and `ifnoerr()` macros).
 
 ### Todolist
 
 - R20 projectdefinition: Handle more of the `projectdefinition.txt` properties
-- R20 Legacy: Provide a legacy API support header (for R19 and older plugin code)
-- R20 Linux: Plugin suffix? Compile flags/defines?
-- pre R20 Linux/Python: Check how we should link with Python (see `python` target)
+- R20 Linux: Plugin suffix? Compile errors with StrongCOWHandler in `cpython.h`
+- R20 Python: Choose the correct link targets on Mac/Linux. On Windows, search
+  for a Python 2.7 x64 installation.
 - pre R20 Linux: Plugin suffix is .so?
-- pre R20: ClangCL flags
 
 ### Configuration
 
@@ -85,7 +87,7 @@ provide R19 compatible `iferr()` and `ifnoerr()` macros).
 
 | Cinema 4D | Windows      | OSX               |
 | ----| ------------------ | ----------------- |
-| R20 | Visual Studio 2017 | Apple XCode 9 (?) |
+| R20 | Visual Studio 2015 | Apple XCode 9 (?) |
 | R19 | Visual Studio 2015 | Apple XCode 8     |
 | R18 | Visual Studio 2013 | Apple XCode 7     |
 | R17 | Visual Studio 2013 | Apple XCode 6     |

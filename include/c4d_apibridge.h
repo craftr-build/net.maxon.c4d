@@ -5,9 +5,9 @@
  * terms of the Do What The Fuck You Want To Public License, Version 2,
  * as published by Sam Hocevar. See the COPYING file for more details.
  *
- * Note: This header is not associated or endorsed by MAXON or the MAXON
- * SDK Support Team. Using this header may complicate future SDK Support
- * Requests.
+ * Note: This header is not associated with or endorsed by MAXON or the
+ * MAXON SDK Support Team. Using this header may complicate future SDK
+ * support requests.
  */
 
 #pragma once

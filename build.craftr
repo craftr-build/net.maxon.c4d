@@ -36,7 +36,11 @@ options.add('directory', str, '')
 options.add('release', str, '')
 options.add('getsdk', bool, False)
 options.add('rtti', bool, False)
+options.add('sourceprocess', str, '')
 
+if options.sourceprocess not in ('', 'always'):
+  print('[Warning:] c4d:sourceprocess={!r} is invalid'.format(options.sourceprocess))
+  options.sourceprocess = ''
 
 if OS.id == 'win32': platform = 'win'
 elif OS.id == 'darwin': platform = 'mac'
@@ -445,7 +449,7 @@ else:
         properties({
           '@cxx.defines+': {
             'win': ['MAXON_TARGET_WINDOWS'],
-            'mac': ['MAXON_TARGET_MACOS'],
+            'mac': ['MAXON_TARGET_MACOS', 'MAXON_TARGET_OSX'],
             'linux': ['MAXON_TARGET_LINUX']
           }[platform] + {
             'debug': ['MAXON_TARGET_DEBUG'],
@@ -566,7 +570,7 @@ else:
       # Currently we have no dependency that we can introduce between
       # running the source processor and the use of these headers in
       # other translation units.
-      if not path.isdir(path.join(target.directory, 'generated')) or 1:
+      if options.sourceprocess == 'always' or not path.isdir(path.join(target.directory, 'generated')):
         from craftr.utils import sh
         command.remove('--singlethreaded')
         sh.run(command)
@@ -591,6 +595,9 @@ else:
 
     if cxx.compiler.id != 'msvc' or 'clang' in cxx.compiler.name.lower():
       target['cxx.compilerFlags+'] = ['-msse4.2']
+
+    if cxx.compiler.id == 'gcc':
+      target['cxx.compilerFlags+'] = ['-Wno-maybe-uninitialized', '-D_GLIBCXX_USE_CXX11_ABI=0', '-std=gnu++14', '-Wno-multichar']
 
     cxx.build()
 

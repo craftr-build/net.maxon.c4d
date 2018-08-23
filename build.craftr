@@ -454,7 +454,7 @@ else:
           }[platform] + {
             'debug': ['MAXON_TARGET_DEBUG'],
             'release': ['MAXON_TARGET_RELEASE']
-          }[BUILD.variant] + ['USE_API_MAXON', 'MAXON_TARGET_64BIT', '__64BIT']
+          }[BUILD.variant] + ['MAXON_API', 'USE_API_MAXON', 'MAXON_TARGET_64BIT', '__64BIT']
         })
         if platform == 'win':
           properties({
@@ -613,7 +613,14 @@ else:
       target['cxx.compilerFlags+'] = ['-msse4.2']
 
     if cxx.compiler.id == 'gcc':
-      target['cxx.compilerFlags+'] = ['-Wno-maybe-uninitialized', '-D_GLIBCXX_USE_CXX11_ABI=0', '-std=gnu++14', '-Wno-multichar']
+      target['cxx.compilerFlags+'] = [
+        '-fvisibility=hidden', '-fmessage-length=0', '-mssse3',
+        '-Wno-maybe-uninitialized', '-D_GLIBCXX_USE_CXX11_ABI=0',
+        '-std=gnu++14', '-Wno-multichar'
+      ]
+
+    if not target.properties.is_set('cxx.positionIndependentCode'):
+      target['cxx.positionIndependentCode'] = True
 
     cxx.build()
 

@@ -237,7 +237,7 @@ if release < 20:
       if release <= 15:
         flags = sh.split('''
           -fmessage-length=0 -Wno-trigraphs -Wno-missing-field-initializers
-          -Wno-non-virtual-dtor -Woverloaded-virtual -Wmissing-braces -Wparentheses
+          -Wno-non-virtual-dtor -Woverloaded-virtual -Wmissing-braces
           -Wno-switch -Wunused-function -Wunused-label -Wno-unused-parameter
           -Wunused-variable -Wunused-value -Wno-empty-body -Wno-uninitialized
           -Wunknown-pragmas -Wno-shadow -Wno-conversion -fstrict-aliasing
@@ -251,7 +251,7 @@ if release < 20:
       else:
         flags = sh.split('''
           -fmessage-length=0 -Wno-trigraphs -Wmissing-field-initializers
-          -Wno-non-virtual-dtor -Woverloaded-virtual -Wmissing-braces -Wparentheses
+          -Wno-non-virtual-dtor -Woverloaded-virtual -Wmissing-braces
           -Wno-switch -Wunused-function -Wunused-label -Wno-unused-parameter
           -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized
           -Wunknown-pragmas -Wshadow -Wno-conversion -Wsign-compare -fstrict-aliasing
@@ -363,7 +363,7 @@ if release < 20:
       elif platform == 'linux':
         # TODO: I THINK Cinema 4D comes with system Python? Gotta check.
         properties({
-          '@cxx.systemLibraries': 'python'
+          '@cxx.systemLibraries': ['python']
         })
 
     else:

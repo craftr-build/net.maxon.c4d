@@ -25,10 +25,14 @@ __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
 __version__ = '1.0.0'
 
 import argparse
+import atexit
 import glob2
 import os
 import re
 import shutil
+import subprocess
+import tempfile
+import zipfile
 
 parser = argparse.ArgumentParser()
 add_arg = parser.add_argument
@@ -98,22 +102,33 @@ def main():
   elif args.version < 100:
     args.version = args.version * 1000
 
+  sources_root = args.path
   if args.version < 16000:
     maindir = old_api_maindir
     sources = old_api_sources
     resources = old_api_resources
-  else:
+  elif args.version < 20000:
     maindir = new_api_maindir
     sources = new_api_sources
     resources = new_api_resources
+  else:
+    print('Detected R20 installation, unpacking to temporary location ...')
+    tempdir = tempfile.mkdtemp()
+    atexit.register(lambda: shutil.rmtree(tempdir))
+    with zipfile.ZipFile(os.path.join(args.path, 'sdk.zip')) as fp:
+      fp.extractall(tempdir)
+    sources_root = tempdir
+    sources = [os.path.join(tempdir, 'frameworks/**/*'),
+               os.path.join(tempdir, 'plugins/**/*')]
+    resources = new_api_resources
 
-  sources = sorted(multiglob(sources, args.path))
+  sources = sorted(multiglob(sources, sources_root))
   resources = sorted(multiglob(resources, args.path))
 
   # Copy the header and source files of the SDK into the output directory
   # with the same folder structure.
   for fn_in in filter(os.path.isfile, sources):
-    arcname = os.path.relpath(fn_in, args.path)
+    arcname = os.path.relpath(fn_in, sources_root)
     print('Copying', arcname)
     fn_out = os.path.join(args.outdir, arcname)
     makedirs(os.path.dirname(fn_out))
@@ -137,7 +152,6 @@ def main():
     print('Generated with sdkextract.py', file = fp)
 
   if args.compress:
-    import subprocess
     subprocess.check_call(['tar', '-vczf', os.path.abspath(args.outdir) + '.tar.gz', '-C', os.path.dirname(args.outdir), os.path.basename(args.outdir)])
 
 

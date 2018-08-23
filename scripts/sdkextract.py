@@ -36,6 +36,7 @@ add_arg('path', help = 'Path to the Cinema 4D installation.')
 add_arg('outdir', help = 'The output directory to put the gathered files into.')
 add_arg('-C', '--collect-resources', action = 'store_true', help = 'Collect all header and resource files into the SDK main directory.')
 add_arg('-V', '--version', type = int, help = 'The Cinema 4D version if it can not be determined from the installation path.')
+add_arg('-c', '--compress', action='store_true', help='Create a .tar.gz archive in the parent directory.')
 
 
 old_api_maindir = 'resource/_api'
@@ -133,7 +134,11 @@ def main():
   # Create a file that denotes the version of the SDK.
   filename = os.path.join(args.outdir, 'c4d-sdk-{}.txt'.format(args.version))
   with open(filename, 'w') as fp:
-    print('Generated with extract-c4d-sdk.py', file = fp)
+    print('Generated with sdkextract.py', file = fp)
+
+  if args.compress:
+    import subprocess
+    subprocess.check_call(['tar', '-vczf', os.path.abspath(args.outdir) + '.tar.gz', '-C', os.path.dirname(args.outdir), os.path.basename(args.outdir)])
 
 
 if ('require' in globals() and require.main == module) or __name__ == '__main__':

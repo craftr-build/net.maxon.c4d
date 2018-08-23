@@ -135,6 +135,7 @@ Craftr can however take the following information from the
 - `APIS` (additively to the `c4d.APIS` target property)
 - `Type` (`Lib` or `DLL`, overriding the `cxx.type` and
   `cxx.preferredLinkage` properties)
+- `Exclude`, `ExcludeFromBuild`
 
 ### FAQ
 

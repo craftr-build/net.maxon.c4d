@@ -517,7 +517,23 @@ else:
       # TODO: Handle AdditionlIncludeDirectories etc.
       # TODO: Ignore excluded .cpp files (from projectdefinitions)
       if not target.properties.is_set('cxx.srcs'):
-        target['cxx.srcs+'] = glob('source/**/*.cpp')
+        sources = []
+        excludes = ';'.join(defs.get(x, '') + ';' + defs.get(x + '.' + API_PLATFORM, '')
+                            for x in ['Exclude', 'ExcludeFromBuild'])
+        excludes = [x for x in excludes.split(';') if x]
+        for x in glob('source/**/*.cpp'):
+          excluded = False
+          for ex in excludes:
+            if ex.startswith('/'):
+              if path.base(x).startswith(ex[1:]):
+                excluded = True
+                break
+            else:
+              print('[WARNING]: ({}) don\'t know how to handle exclude "{}"'.format(ex))
+          if not excluded:
+            sources.append(x)
+        target['cxx.srcs+'] = sources
+
     elif APIS is None:
       APIS = ['cinema.framework']
 

@@ -144,10 +144,10 @@ Craftr can however take the following information from the
   compiled with MinGW incompatible. More info
   [here](https://stackoverflow.com/questions/11332585/g-equivalents-for-visualc-vmg-vms).
 
-* **Will there be support for Clang-CL?** Yes. A former version of this
-  package (for a previous Craftr version) already supported Clang-CL. In
-  contrast to MinGW, dynamic libraries compiled with Clang-CL can be made
-  ABI compatible with Visual C.
+* **How to get the R20 Project Tool to work on non-Ubuntu systems?**
+  You may get an error like `error while loading shared library: libprocps.so.3`.
+  Make sure you have a version of libprocs installed, eg `libprocps7`. Symlink
+  it like so: `sudo ln -s /usr/lib64/libprocps.so.{7,3}`
 
 ### Known Issues
 

@@ -49,7 +49,7 @@ def get_c4d_path_and_release():
   path = (options.directory or __file__) + '/'
   match = re.search(r'(.*Cinema\s+4D\s+R(\d+).*?[/\\])', path, re.I)
   if not match:
-    error('C4D installation path could not be determined')
+    error('C4D installation path could not be determined.')
   return match.groups()
 
 
@@ -73,8 +73,10 @@ def _init():
   if options.release:
     options.release = int(float(options.release.split('-', 1)[0]))  # remove possible -llvm6fix suffix
   else:
-    options.release = int(get_c4d_path_and_release()[1])
-
+    try:
+      options.release = int(get_c4d_path_and_release()[1])
+    except ModuleError as exc:
+      error('C4D release could not be determined. Specify c4d:release option!')
 
 _init()
 print('Maxon Cinema 4D SDK R{} ({})'.format(options.release, options.directory))
@@ -564,8 +566,9 @@ else:
       # Currently we have no dependency that we can introduce between
       # running the source processor and the use of these headers in
       # other translation units.
-      if not path.isdir(path.join(target.directory, 'generated')):
+      if not path.isdir(path.join(target.directory, 'generated')) or 1:
         from craftr.utils import sh
+        command.remove('--singlethreaded')
         sh.run(command)
 
     properties({

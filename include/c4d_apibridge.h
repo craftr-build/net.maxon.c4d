@@ -5,11 +5,9 @@
  * terms of the Do What The Fuck You Want To Public License, Version 2,
  * as published by Sam Hocevar. See the COPYING file for more details.
  *
- * ====================================================================
- *
- * This header provides the Cinema 4D bridge API that enables writing
- * plugins that are compatible with both the R20 and pre-R20 SDK with
- * minimal overhead/changes.
+ * Note: This header is not associated or endorsed by MAXON or the MAXON
+ * SDK Support Team. Using this header may complicate future SDK Support
+ * Requests.
  */
 
 #pragma once

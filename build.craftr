@@ -452,7 +452,7 @@ else:
             'mac': ['MAXON_TARGET_MACOS', 'MAXON_TARGET_OSX'],
             'linux': ['MAXON_TARGET_LINUX']
           }[platform] + {
-            'debug': ['MAXON_TARGET_DEBUG'],
+            'debug': ['MAXON_TARGET_DEBUG', 'DEBUG=DEBUG'],  # 'DEBUG' is used as an identifier in logger.h
             'release': ['MAXON_TARGET_RELEASE']
           }[BUILD.variant] + ['MAXON_API', 'USE_API_MAXON', 'MAXON_TARGET_64BIT', '__64BIT']
         })
@@ -543,6 +543,55 @@ else:
     if not module_id:
       error('[{}] no c4d.ModuleId'.format(target.id))
 
+    register_cpp = None
+    if target['c4d.SourceProcessor']:
+      register_cpp = path.canonical(path.join(target.directory, 'generated/hxx/register.cpp'))
+      depfile_name = register_cpp + '.d'
+
+      command = [
+        sys.executable,
+        str(require.resolve('./scripts/sourceprocessor-wrapper.py').filename)
+      ]
+
+      if not path.isfile(projectdefinition):
+        print('[WARNING]: "{}" does not exist. Craftr will write a temporary '
+              'version of it during the build process.'.format(projectdefinition))
+        command += ['--write-temp-projectdefinition']
+        command += ['--module-id', module_id]
+        command += ['--type', 'Dll']  # TODO: Use Lib if we're actually using Lib
+
+      command += [
+        sourceprocessor_script,
+        target.directory,
+        '--',
+        '--singlethreaded'
+      ]
+      for k, v in (target['c4d.stylecheck'] or {}).items():
+        command += ['--option', '{}={}'.format(k, v)]
+
+      operator(
+        'c4d.sourceprocessor',
+        commands=[command]
+      )
+      build_set(
+        {}, {'out': register_cpp},
+        description='MAXON Source Preprocessor ({})'.format(target.directory),
+        depfile = depfile_name
+      )
+      target['cxx.srcs+'] = [register_cpp]
+
+      # Run the source processor at least once immediately.
+      # This is a workaround for Cinema frameworks for which the
+      # processor yields additional header files which are then
+      # included by standard headers in the framework.
+      # Currently we have no dependency that we can introduce between
+      # running the source processor and the use of these headers in
+      # other translation units.
+      if options.sourceprocess == 'always' or not path.isdir(path.join(target.directory, 'generated')):
+        from craftr.utils import sh
+        command.remove('--singlethreaded')
+        sh.run(command)
+
     if target['c4d.SourceProcessor']:
       register_cpp = path.join(target.directory, 'generated/hxx/register.cpp')
       depfile_name = register_cpp + '.d'
@@ -623,6 +672,15 @@ else:
       target['cxx.positionIndependentCode'] = True
 
     cxx.build()
+
+    # Add register.cpp as dependency too all compile build sets to ensure
+    # the source processor runs before any other translation unit.
+    if register_cpp:
+      for op in target.operators:
+        if op.name.startswith('cxx.compileCpp#'):
+          for bset in op.build_sets:
+            if bset.inputs['src'][0] != register_cpp:
+              bset.add_input_files('_register_cpp', [register_cpp])
 
   module.scope.targets['addons'].add_dependency(get_framework('network.framework'), public=True)
 

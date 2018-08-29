@@ -387,6 +387,16 @@ namespace c4d_apibridge {
     return !f.Content();
     #endif
   }
+  inline Bool IsEmpty(C4DUuid const& u) {
+    #if API_VERSION >= 20000
+    if (u.IsPopulated()) {
+      return u == C4DUuid(EC);
+    }
+    return true;
+    #else
+    return !u.Content();
+    #endif
+  }
 
   inline DescID const& DescriptionCommandID(DescriptionCommand const* desc) {
     #if API_VERSION >= 20000
@@ -509,7 +519,7 @@ namespace c4d_apibridge {
     inline typename Super::Entry const* FindEntry(K const& key) const { return this->Find(key); }
     inline typename Super::Entry* FindOrCreateEntry(K const& key, maxon::Bool& created) { return this->InsertEntry(key, created).GetPointer(); }
     inline typename Super::Entry* Put(K const& key, V const& value) { return this->Insert(key, value).GetPointer(); }
-    inline Bool Remove(K const& k) { return this->Erase(k); }
+    inline Bool Remove(K const& k) { return this->Erase(k).GetValue(); }
     inline void Remove(typename Super::Entry* e) { this->Erase(this->GetIterator(e)); }
     // TODO: More backwards compatibility functions
     #endif

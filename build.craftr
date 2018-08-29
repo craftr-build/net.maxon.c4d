@@ -533,7 +533,6 @@ else:
           if not excluded:
             sources.append(x)
         target['cxx.srcs+'] = sources
-
     elif APIS is None:
       APIS = ['cinema.framework']
 
@@ -546,54 +545,6 @@ else:
     register_cpp = None
     if target['c4d.SourceProcessor']:
       register_cpp = path.canonical(path.join(target.directory, 'generated/hxx/register.cpp'))
-      depfile_name = register_cpp + '.d'
-
-      command = [
-        sys.executable,
-        str(require.resolve('./scripts/sourceprocessor-wrapper.py').filename)
-      ]
-
-      if not path.isfile(projectdefinition):
-        print('[WARNING]: "{}" does not exist. Craftr will write a temporary '
-              'version of it during the build process.'.format(projectdefinition))
-        command += ['--write-temp-projectdefinition']
-        command += ['--module-id', module_id]
-        command += ['--type', 'Dll']  # TODO: Use Lib if we're actually using Lib
-
-      command += [
-        sourceprocessor_script,
-        target.directory,
-        '--',
-        '--singlethreaded'
-      ]
-      for k, v in (target['c4d.stylecheck'] or {}).items():
-        command += ['--option', '{}={}'.format(k, v)]
-
-      operator(
-        'c4d.sourceprocessor',
-        commands=[command]
-      )
-      build_set(
-        {}, {'out': register_cpp},
-        description='MAXON Source Preprocessor ({})'.format(target.directory),
-        depfile = depfile_name
-      )
-      target['cxx.srcs+'] = [register_cpp]
-
-      # Run the source processor at least once immediately.
-      # This is a workaround for Cinema frameworks for which the
-      # processor yields additional header files which are then
-      # included by standard headers in the framework.
-      # Currently we have no dependency that we can introduce between
-      # running the source processor and the use of these headers in
-      # other translation units.
-      if options.sourceprocess == 'always' or not path.isdir(path.join(target.directory, 'generated')):
-        from craftr.utils import sh
-        command.remove('--singlethreaded')
-        sh.run(command)
-
-    if target['c4d.SourceProcessor']:
-      register_cpp = path.join(target.directory, 'generated/hxx/register.cpp')
       depfile_name = register_cpp + '.d'
 
       command = [

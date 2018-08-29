@@ -571,6 +571,14 @@ namespace c4d_apibridge {
   namespace c4d_apibridge {
   namespace detail {
 
+    template <typename T>
+    struct PtrUnpack {
+      T* _ptr;
+      PtrUnpack(T* ptr) : _ptr(ptr) { }
+      inline operator T& () { DebugAssert(_ptr); return *_ptr; }
+      inline operator T* () { return _ptr; }
+    };
+
     class Error {
     protected:
       Bool _ok = false;
@@ -578,14 +586,14 @@ namespace c4d_apibridge {
       inline Bool Catch() const { return !_ok; }
 
       template <typename T>
-      friend inline T& operator % (T*&& value, Error& self) {
+      friend inline PtrUnpack<T> operator % (T*&& value, Error& self) {
         if (value) {
           self._ok = true;
-          return *std::forward<T*>(value);
+          return std::forward<T*>(value);
         }
         else {
           self._ok = false;
-          return *(T*)nullptr;
+          return (T*)nullptr;
         }
       }
 

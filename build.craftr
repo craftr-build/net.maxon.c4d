@@ -444,13 +444,13 @@ else:
       if name == 'core.framework':
         properties({
           '@cxx.defines+': {
-            'win': ['MAXON_TARGET_WINDOWS'],
+            'win': ['MAXON_TARGET_WINDOWS', '_UNICODE', 'UNICODE', '__PC', '_CRT_SECURE_NO_WARNINS', 'PSAPI_VERSION=1', '_WIN64', '_CONSOLE'],
             'mac': ['MAXON_TARGET_MACOS', 'MAXON_TARGET_OSX'],
             'linux': ['MAXON_TARGET_LINUX']
           }[platform] + {
             'debug': ['MAXON_TARGET_DEBUG', 'DEBUG=DEBUG'],  # 'DEBUG' is used as an identifier in logger.h
             'release': ['MAXON_TARGET_RELEASE']
-          }[BUILD.variant] + ['MAXON_API', 'USE_API_MAXON', 'MAXON_TARGET_64BIT', '__64BIT']
+          }[BUILD.variant] + ['MAXON_TARGET_64BIT', '__64BIT']
         })
         if platform == 'win':
           properties({
@@ -578,9 +578,13 @@ else:
       )
       target['cxx.srcs+'] = [register_cpp]
 
-    properties({
-      'cxx.defines+': ['MAXON_MODULE_ID="' + module_id + '"']
-    })
+    target['cxx.defines+'] = [
+      'USE_API_MAXON',
+      'MAXON_MODULE_ID="' + module_id + '"',
+      'PRIVATE_MODULE_' + module_id.replace('.', '_')
+    ]
+    if target['c4d.MaxonApi']:
+      target['cxx.defines+'] = ['MAXON_API']
 
     if not target.properties.is_set('cxx.cppStd'):
       if cxx.compiler.id == 'msvc':

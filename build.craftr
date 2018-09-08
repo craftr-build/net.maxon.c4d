@@ -36,11 +36,6 @@ options.add('directory', str, '')
 options.add('release', str, '')
 options.add('getsdk', bool, False)
 options.add('rtti', bool, False)
-options.add('sourceprocess', str, '')
-
-if options.sourceprocess not in ('', 'always'):
-  print('[Warning:] c4d:sourceprocess={!r} is invalid'.format(options.sourceprocess))
-  options.sourceprocess = ''
 
 if OS.id == 'win32': platform = 'win'
 elif OS.id == 'darwin': platform = 'mac'
@@ -579,18 +574,6 @@ else:
         depfile = depfile_name
       )
       target['cxx.srcs+'] = [register_cpp]
-
-      # Run the source processor at least once immediately.
-      # This is a workaround for Cinema frameworks for which the
-      # processor yields additional header files which are then
-      # included by standard headers in the framework.
-      # Currently we have no dependency that we can introduce between
-      # running the source processor and the use of these headers in
-      # other translation units.
-      if options.sourceprocess == 'always' or not path.isdir(path.join(target.directory, 'generated')):
-        from craftr.utils import sh
-        command.remove('--singlethreaded')
-        sh.run(command)
 
     properties({
       'cxx.defines+': ['MAXON_MODULE_ID="' + module_id + '"']

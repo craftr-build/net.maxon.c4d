@@ -28,6 +28,8 @@ generated files.
 """
 
 import argparse
+import errno
+import hashlib
 import os
 import nr.fs
 import subprocess as sp
@@ -35,6 +37,27 @@ import shutil
 import sys
 
 escape = lambda x: x.replace(' ', '\\ ')
+
+
+def hash_dir(directory):
+  try:
+    files = os.listdir(directory)
+  except OSError as e:
+    if e.errno != errno.ENOENT:
+      raise
+    files = []
+  files.sort()
+  hasher = hashlib.md5()
+  for filename in files:
+    hasher.update(filename.encode('utf8'))
+    with open(nr.fs.join(directory, filename), 'rb') as fp:
+      data = fp.read()
+      while True:
+        data = fp.read(2048)
+        if not data: break
+        hasher.update(data)
+  return hasher.hexdigest()
+
 
 def main():
   parser = argparse.ArgumentParser()
@@ -59,16 +82,14 @@ def main():
         print('ModuleId={}'.format(args.module_id), file=fp)
       print('stylecheck=false'.format(args.type), file=fp)
 
+  # Calculate the current cache of the directory.
+  hxx_dir = os.path.join(args.directory, 'generated', 'hxx')
+  hxx_hash = hash_dir(hxx_dir)
+
   try:
-    proc = sp.Popen([sys.executable, args.sourceprocessor, args.directory] + args.argv, stdout=sp.PIPE, stderr=sp.STDOUT)
-    files = []
-    for line in proc.stdout:
-      line = line.decode()
-      print(line, end='')
-      line = line.strip()
-      if line.startswith('Parsing') and line.endswith('...'):
-        files.append(line[7:-3].strip())
-    proc.communicate()
+    res = sp.call([sys.executable, args.sourceprocessor, args.directory] + args.argv)
+    if res != 0:
+      sys.exit(res)
   finally:
     if args.write_temp_projectdefinition:
       if remove_project_dir:
@@ -76,24 +97,25 @@ def main():
       else:
         os.remove(projectdefs)
 
-  registercpp = os.path.join(args.directory, 'generated', 'hxx', 'register.cpp')
+  hxx_changed = (hash_dir(hxx_dir) != hxx_hash)
+
+  registercpp = os.path.join(hxx_dir, 'register.cpp')
   if not os.path.isfile(registercpp):
     return
 
-  depfile = os.path.join(args.directory, 'generated', 'hxx', 'register.cpp.d')
-  cachefile = os.path.join(args.directory, 'generated', 'craftr-depscache.txt')
+  stampfile = os.path.join(args.directory, 'generated', 'sourceprocessor.stamp')
+  if not os.path.isfile(stampfile):
+    print('fatal: sourceprocessor.stamp not found')
+    sys.exit(1)
 
-  # Parse in the previous file list. The source processor only outputs the
-  # files that it parses because they are new or changed, not the unchaged
-  # ones.
-  # We use a separate cache file as Ninja deletes the depfile after the
-  # command was executed.
-  if os.path.isfile(cachefile):
-    with open(cachefile) as fp:
-      for line in fp:
-        line = line.strip()
-        if line and line not in files:
-          files.append(line)
+  files = []
+  with open(stampfile) as fp:
+    for line in fp:
+      line = line.strip()
+      if line and line not in files:
+        files.append(os.path.join(args.directory, 'source', line))
+
+  depfile = os.path.join(hxx_dir, 'register.cpp.d')
 
   print('Writing dependencies file:', depfile)
   with open(depfile, 'w') as fp:
@@ -103,18 +125,16 @@ def main():
     if files:
       fp.write(' ' + escape(files[-1]) + '\n')
 
-  with open(cachefile, 'w') as fp:
-    for x in files:
-      fp.write(x + '\n')
-
   # If the register.cpp does not need to be updated, its timestamp will be
   # older than that of the files that were used to parse it. We touch the
   # register.cpp so the build system nows that the update has happened
   # (timestamp newer than the inputs).
-  with open(registercpp, 'a'):
-    os.utime(registercpp, None)
+  if hxx_changed:
+    print('Update timestamp:', registercpp)
+    with open(registercpp, 'a'):
+      os.utime(registercpp, None)
 
-  return proc.returncode
+  return res
 
 if __name__ == '__main__':
   sys.exit(main())

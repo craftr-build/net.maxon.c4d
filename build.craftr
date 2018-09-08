@@ -570,11 +570,12 @@ else:
 
       operator(
         'c4d.sourceprocessor',
-        commands=[command]
+        commands = [command],
+        restat = True
       )
       build_set(
         {}, {'out': register_cpp},
-        description='MAXON Source Preprocessor ({})'.format(target.directory),
+        description = 'MAXON Source Preprocessor ({})'.format(target.directory),
         depfile = depfile_name
       )
       target['cxx.srcs+'] = [register_cpp]

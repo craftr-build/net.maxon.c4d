@@ -581,7 +581,7 @@ else:
     target['cxx.defines+'] = [
       'USE_API_MAXON',
       'MAXON_MODULE_ID="' + module_id + '"',
-      'PRIVATE_MODULE_' + module_id.replace('.', '_')
+      'PRIVATE_MODULE_' + re.sub('[^\w\d]+', '_', module_id)
     ]
     if target['c4d.MaxonApi']:
       target['cxx.defines+'] = ['MAXON_API']

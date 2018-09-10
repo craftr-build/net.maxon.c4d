@@ -3,7 +3,7 @@
  * All rights reserved.
  */
 
-#include <c4d.h>
+#include "c4d.h"
 #include "c4d_symbols.h"
 
 

@@ -11,9 +11,9 @@
  */
 
 #pragma once
-#include <c4d.h>
-#include <c4d_falloffdata.h>
-#include <vector4.h>
+#include "c4d.h"
+#include "c4d_falloffdata.h"
+#include "vector4.h"
 
 #define C4D_APIBRIDGE_CONCAT(x, y) PRIVATE_C4D_APIBRIDGE_CONCAT(x, y)
 #define PRIVATE_C4D_APIBRIDGE_CONCAT(x, y) x##y
@@ -300,7 +300,7 @@
 
 // GetMacAddress
 #if API_VERSION >= 20000
-  #include <maxon/network_ip.h>
+  #include "maxon/network_ip.h"
   inline Bool GetMacAddress(maxon::BaseArray<UChar>& macAddress) {
     iferr (maxon::BaseArray<UChar> addr = maxon::NetworkIpInterface::GetMacAddress()) {
       return false;

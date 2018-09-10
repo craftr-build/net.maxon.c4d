@@ -35,7 +35,7 @@ Many symbol names in the C4D SDK changed drastically in R15. Maxon provided a
 `__LEGACY_API` preprocessor switch that enabled most of the old names, however
 that switch is discontinued since R17.
 
-This Craftr module provides the old C4D legacy API header as `<c4d_legacy.h>`,
+This Craftr module provides the old C4D legacy API header as `"c4d_legacy.h"`,
 which allows you to use much of the old API even in R17 to R19. It will be
 available by adding the `net.maxon.c4d:addons` target to your plugins'
 dependencies.
@@ -62,7 +62,7 @@ functions invalid.
 
 This Craftr module provides a **bridge API** &ndash; meaning that it is a new
 and separate API that is compatible with the pre-R20 and R20 SDK. This API
-must be explicitly included with the `<c4d_apibridge.h>` header. It provides
+must be explicitly included with the `"c4d_apibridge.h"` header. It provides
 the pre-R20 enumerations (generated using the `scripts/r20enums.py` script)
 but encrouages use of API that is more similar to R20 (eg. aims to provide R19
 compatible `iferr()` and `ifnoerr()` macros).

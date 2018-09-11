@@ -45,6 +45,16 @@ R20_RENAMES = {
   'UNDOTYPE': {
     'NEWOBJ': 'NEW',
     'DELETEOBJ': 'DELETE'
+  },
+  'GEMB_R': {
+    'V_UNDEFINED': 'UNDEFINED',
+    'V_OK': 'OK',
+    'V_CANCEL': 'CANCEL',
+    'V_ABORT': 'ABORT',
+    'V_RETRY': 'RETRY',
+    'V_IGNORE': 'IGNORE',
+    'V_YES': 'YES',
+    'V_NO': 'NO'
   }
 }
 
@@ -92,12 +102,17 @@ def main(argv=None, prog=None):
   parser = get_argument_parser(prog)
   args = parser.parse_args(argv)
 
-  data = []
+  headers = []
   for directory in args.directories:
     for root, dirs, files in os.walk(directory):
       for filename in files:
         if filename.endswith('.h'):
-          data += parse_header_enums(os.path.join(root, filename))
+          headers.append(os.path.join(root, filename))
+  headers.sort()
+
+  data = []
+  for filename in headers:
+    data += parse_header_enums(filename)
 
   if args.format == 'json':
     json.dump(data, sys.stdout)

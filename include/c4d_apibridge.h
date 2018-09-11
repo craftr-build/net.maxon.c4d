@@ -298,6 +298,13 @@
   }
 #endif
 
+// VectorAngle
+#if API_VERSION >= 20000
+  inline Float VectorAngle(Vector const& a, Vector const& b) {
+    return GetAngle(a, b);
+  }
+#endif
+
 // GetMacAddress
 #if API_VERSION >= 20000
   #include "maxon/network_ip.h"
@@ -398,20 +405,49 @@ namespace c4d_apibridge {
     #endif
   }
 
-  inline DescID const& DescriptionCommandID(DescriptionCommand const* desc) {
-    #if API_VERSION >= 20000
-    return desc->_descId;
-    #else
-    return desc->id;
-    #endif
-  }
-  inline DescID& DescriptionCommandID(DescriptionCommand* desc) {
-    #if API_VERSION >= 20000
-    return desc->_descId;
-    #else
-    return desc->id;
-    #endif
-  }
+  #if API_VERSION >= 20000
+    inline DescID const& GetDescriptionID(DescriptionBaseMessage const* desc) {
+      return desc->_descId;
+    }
+    inline DescID& GetDescriptionID(DescriptionBaseMessage* desc) {
+      return desc->_descId;
+    }
+    inline Int32 GetDescriptionChosen(DescriptionPopup const* desc) {
+      return desc->_chosen;
+    }
+    inline BaseContainer const* GetDescriptionMsg(DescriptionPopup const* desc) {
+      return desc->_msg;
+    }
+    inline BaseContainer& GetDescriptionPopup(DescriptionPopup* desc) {
+      return desc->_popup;
+    }
+  #else
+    #define _DEF(Type) \
+      inline DescID const& GetDescriptionID(Type const* desc) { \
+        return desc->id; \
+      } \
+      inline DescID& GetDescriptionID(Type* desc) { \
+        return desc->id; \
+      }
+    _DEF(DescriptionCheckDragAndDrop)
+    _DEF(DescriptionCommand)
+    _DEF(DescriptionCustomGuiNotification)
+    _DEF(DescriptionGetObjects)
+    _DEF(DescriptionExAdded)
+    _DEF(DescriptionExDeleted)
+    _DEF(DescriptionExSelChanged)
+    _DEF(DescriptionPopup)
+    #undef _DEF
+    inline Int32 GetDescriptionChosen(DescriptionPopup const* desc) {
+      return desc->chosen;
+    }
+    inline BaseContainer const* GetDescriptionMsg(DescriptionPopup const* desc) {
+      return desc->msg;
+    }
+    inline BaseContainer& GetDescriptionPopup(DescriptionPopup* desc) {
+      return desc->popup;
+    }
+  #endif
 
   inline maxon::BaseArray<Filename> GetGlobalTexturePaths() {
     maxon::BaseArray<Filename> result;
@@ -456,6 +492,14 @@ namespace c4d_apibridge {
   }
 
   inline Matrix4d Invert(Matrix4d const& m) {
+    #if API_VERSION >= 20000
+      return ~m;
+    #else
+      return !m;
+    #endif
+  }
+
+  inline Matrix Invert(Matrix const& m) {
     #if API_VERSION >= 20000
       return ~m;
     #else

@@ -14,6 +14,7 @@
 #include "c4d.h"
 #include "c4d_falloffdata.h"
 #include "vector4.h"
+#include "lib_description.h"
 
 #define C4D_APIBRIDGE_CONCAT(x, y) PRIVATE_C4D_APIBRIDGE_CONCAT(x, y)
 #define PRIVATE_C4D_APIBRIDGE_CONCAT(x, y) x##y
@@ -415,21 +416,20 @@ namespace c4d_apibridge {
       return desc->_popup;
     }
   #else
-    #define _DEF(Type) \
+    #define _DEF(Type, Member) \
       inline DescID const& GetDescriptionID(Type const* desc) { \
-        return desc->id; \
+        return desc->Member; \
       } \
       inline DescID& GetDescriptionID(Type* desc) { \
-        return desc->id; \
+        return desc->Member; \
       }
-    _DEF(DescriptionCheckDragAndDrop)
-    _DEF(DescriptionCommand)
-    _DEF(DescriptionCustomGuiNotification)
-    _DEF(DescriptionGetObjects)
-    _DEF(DescriptionExAdded)
-    _DEF(DescriptionExDeleted)
-    _DEF(DescriptionExSelChanged)
-    _DEF(DescriptionPopup)
+    _DEF(DescriptionCheckDragAndDrop, id)
+    _DEF(DescriptionCommand, id)
+    #if API_VERSION >= 19000
+    _DEF(DescriptionCustomGuiNotification, _descId)
+    #endif
+    _DEF(DescriptionGetObjects, descid)
+    _DEF(DescriptionPopup, id)
     #undef _DEF
     inline Int32 GetDescriptionChosen(DescriptionPopup const* desc) {
       return desc->chosen;
@@ -493,7 +493,7 @@ namespace c4d_apibridge {
   }
 
   inline Matrix Invert(Matrix const& m) {
-    #if API_VERSION >= 20000
+    #if API_VERSION >= 15000
       return ~m;
     #else
       return !m;

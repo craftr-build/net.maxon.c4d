@@ -373,7 +373,11 @@ if release < 20:
       # come with Python.
       pass
 
-  build = cxx.build
+  def build():
+    target = current_target()
+    if not target.properties.is_set('cxx.enableRtti'):
+      target['cxx.enableRtti'] = options.rtti
+    cxx.build()
 
 else:
   if platform == 'win':

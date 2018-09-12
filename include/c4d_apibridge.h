@@ -298,13 +298,6 @@
   }
 #endif
 
-// VectorAngle
-#if API_VERSION >= 20000
-  inline Float VectorAngle(Vector const& a, Vector const& b) {
-    return GetAngle(a, b);
-  }
-#endif
-
 // GetMacAddress
 #if API_VERSION >= 20000
   #include "maxon/network_ip.h"

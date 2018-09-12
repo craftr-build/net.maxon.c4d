@@ -642,13 +642,21 @@ else:
   # TODO: Provide legacy headers for R20 -> R19 commpatibility and
   #       make the include directory available in this target.
 
-  import python from 'net.craftr.lang.python'
-  if python.cfg['VERSION'] != '27':
-    print('[WARNING]: Using net.maxon.c4d:python can result in '
-          'compile and/or link errors, the Python version found '
-          'on the system is {} but require 27 for Cinema 4D.'.format(python.cfg['VERSION']))
-
-
   target('python')
   depends(get_framework('python.framework'), public=True)
-  depends('net.craftr.lang.python:python', public=True)
+
+  if platform == 'win':
+    import python from 'net.craftr.lang.python'
+    if python.cfg['VERSION'] != '27':
+      print('[WARNING]: Using net.maxon.c4d:python can result in '
+            'compile and/or link errors, the Python version found '
+            'on the system is {} but require 27 for Cinema 4D.'.format(python.cfg['VERSION']))
+    depends('net.craftr.lang.python:python', public=True)
+  elif platform == 'mac':
+    base = path.join(options.directory, 'resource/modules/python/libs/osx/python27.framework')
+    properties({
+      '@cxx.includes': [path.join(base, 'include/python2.7')],
+      '@cxx.dynamicLibraries': [path.join(base, 'python27')]
+    })
+  else:
+    print('[WARNING]: Dunno what to do for Python in C4D on Linux')

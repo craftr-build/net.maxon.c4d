@@ -616,6 +616,14 @@ namespace c4d_apibridge {
       inline operator T* () { return _ptr; }
     };
 
+    template <typename T>
+    struct PtrUnpack<AutoAlloc<T>> {
+      AutoAlloc<T>* _ptr;
+      PtrUnpack(AutoAlloc<T>* ptr) : _ptr(ptr) { }
+      inline operator T& () { DebugAssert(_ptr); DebugAssert(*_ptr); return * (T*)(*this); }
+      inline operator T* () { if (_ptr) return (T*) (*_ptr); return nullptr; }
+    };
+
     class Error {
     protected:
       Bool _ok = false;

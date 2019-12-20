@@ -65,7 +65,7 @@ def _init():
         options.directory = path.join(get_source_archive(url), 'c4dsdk-' + options.release)
       else:
         raise
-  options.directory = path.canonical(options.directory)
+  options.directory = path.canonical(path.expanduser(options.directory))
 
   # Normalize the release name or fall back to the release name that
   # can be determined from the current project path.

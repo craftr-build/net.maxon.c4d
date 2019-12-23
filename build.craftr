@@ -627,7 +627,7 @@ else:
 
     # Add all dependent register.cpp as dependency too all compile build sets
     # to ensure the source processor runs before any other translation unit.
-    register_files = [register_cpp]
+    register_files = [register_cpp] if register_cpp else []
     for dep in target.transitive_dependencies():
       fn = dep.target['c4d._SourceProcessor_register_cpp']
       if fn:

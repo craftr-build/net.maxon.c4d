@@ -19,6 +19,37 @@
 #define C4D_APIBRIDGE_CONCAT(x, y) PRIVATE_C4D_APIBRIDGE_CONCAT(x, y)
 #define PRIVATE_C4D_APIBRIDGE_CONCAT(x, y) x##y
 
+// C4D_APIBRIDGE_COMMANDDATA_EXECUTE, C4D_APIBRIDGE_COMMANDDATA_GETPARENTMANAGER
+#if API_VERSION < 20000
+  #define C4D_APIBRIDGE_COMMANDDATA_EXECUTE(doc) \
+    virtual Bool Execute(BaseDocument* doc) override
+
+  #define C4D_APIBRIDGE_COMMANDDATA_EXECUTE_IMPL(cls, doc) \
+    Bool cls::Execute(BaseDocument* doc)
+
+  #define C4D_APIBRIDGE_COMMANDDATA_GETSTATE(doc) \
+    virtual Int32 GetState(BaseDocument* doc) override
+
+  #define C4D_APIBRIDGE_COMMANDDATA_GETSTATE_IMPL(cls, doc) \
+    Int32 cls::GetState(BaseDocument* doc)
+
+  #define C4D_APIBRIDGE_COMMANDDATA_GETPARENTMANAGER() static_cast<GeDialog*>(nullptr)
+#else
+  #define C4D_APIBRIDGE_COMMANDDATA_EXECUTE(doc) \
+    virtual Bool Execute(BaseDocument* doc, GeDialog* __parentManager) override
+
+  #define C4D_APIBRIDGE_COMMANDDATA_EXECUTE_IMPL(cls, doc) \
+    Bool cls::Execute(BaseDocument* doc, GeDialog* __parentManager)
+
+  #define C4D_APIBRIDGE_COMMANDDATA_GETSTATE(doc) \
+    virtual Int32 GetState(BaseDocument* doc, GeDialog* __parentManager) override
+
+  #define C4D_APIBRIDGE_COMMANDDATA_GETSTATE_IMPL(cls, doc) \
+    Int32 cls::GetState(BaseDocument* doc, GeDialog* __parentManager)
+
+  #define C4D_APIBRIDGE_COMMANDDATA_GETPARENTMANAGER() __parentManager
+#endif
+
 // operator "" _s
 #if API_VERSION < 20000
   inline String operator "" _s(char const* s, size_t l) {
@@ -311,6 +342,11 @@
   }
 #endif
 
+// BMP_EMBOSSED
+#if API_VERSION >= 21000
+  #define BMP_EMBOSSED BMP_GRAYEDOUT
+#endif
+
 namespace c4d_apibridge {
 
   #if API_VERSION >= 20000
@@ -562,7 +598,9 @@ namespace c4d_apibridge {
     #endif
   };
 
-  #if API_VERSION >= 20000
+  #if API_VERSION >= 21000
+    #define PRIVATE_C4D_APIBRIDGE_HASHSET_SUPER maxon::HashSet<T, HASH, maxon::HashMapKeyValuePair, ALLOCATOR, false>
+  #elif API_VERSION >= 20000
     #define PRIVATE_C4D_APIBRIDGE_HASHSET_SUPER maxon::HashSet<T, HASH, ALLOCATOR, false>
   #else
     #define PRIVATE_C4D_APIBRIDGE_HASHSET_SUPER maxon::HashSet<T, HASH, ALLOCATOR>

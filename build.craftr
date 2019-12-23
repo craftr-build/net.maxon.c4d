@@ -61,7 +61,7 @@ def _init():
       options.directory = get_c4d_path_and_release()[0]
     except ModuleError:
       if options.release:
-        url = fmt("https://public.niklasrosenstein.com/cinema4d/c4dsdkarchives/c4dsdk-{options.release}.tar.gz")
+        url = fmt("https://github.com/craftr-build/net.maxon.c4d/releases/download/artifacts_/c4dsdk-{options.release}.tar.gz")
         options.directory = path.join(get_source_archive(url), 'c4dsdk-' + options.release)
       else:
         raise
